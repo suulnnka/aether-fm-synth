@@ -249,7 +249,7 @@
     SC.timer = setInterval(tick, 40);
     SC.dirty = true;
     document.getElementById("playBtn").classList.add("on");
-    document.getElementById("playBtn").textContent = "❚❚ 播放中";
+    document.getElementById("playBtn").textContent = "❚❚";
   };
 
   SC.stop = function () {
@@ -259,7 +259,7 @@
     SC.dirty = true;
     scrollEl.scrollLeft = 0;
     document.getElementById("playBtn").classList.remove("on");
-    document.getElementById("playBtn").textContent = "▶ 播放";
+    document.getElementById("playBtn").textContent = "▶";
   };
 
   SC.toggle = () => SC.playing ? SC.stop() : SC.play();

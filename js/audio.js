@@ -144,8 +144,6 @@ window.FX_SPECS = {
     for (let i = 0; i < A.maxVoices; i++) A.makeVoice();
 
     A.ready = true;
-    const sr = document.getElementById("srLabel");
-    if (sr) sr.textContent = (ctx.sampleRate / 1000).toFixed(1).replace(/\.0$/, "") + "kHz";
     if (Aether.Graph) {
       try { A.syncPatch(); } catch (e) { console.error("syncPatch", e); }
     }
