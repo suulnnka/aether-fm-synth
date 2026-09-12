@@ -140,27 +140,27 @@ input[type=range]{accent-color:var(--accent);width:90px;}
 .node:hover .n-x{opacity:1;}
 .n-x:hover{color:#ff8888;border-color:#7a3a3a;}
 
-.n-body{padding:4px 12px 12px;}
+.n-body{padding:2px 10px 10px;}
 
 /* 波形选择 */
-.wave-row{display:flex;gap:4px;margin:2px 0 8px;}
+.wave-row{display:flex;gap:3px;margin:2px 0 7px;}
 .wave-row button{
   flex:1;background:#151d2b;border:1px solid #26334c;color:#8296b4;
-  font-size:11px;padding:4px 0;border-radius:7px;cursor:pointer;letter-spacing:1px;
+  font-size:10.5px;padding:3.5px 0;border-radius:6px;cursor:pointer;letter-spacing:.8px;
+  transition:all .12s;
 }
-.wave-row button:hover{border-color:#3b5079;}
+.wave-row button:hover{border-color:#3b5079;color:#cfe3ff;}
 .wave-row button.on{
   background:linear-gradient(180deg,#2f4f8f,#243a6b);color:#eaf3ff;border-color:#4a6db5;
   box-shadow:0 0 10px rgba(90,140,255,.35);
 }
 
-/* 开关行: Fixed / Sync / 滤波按钮 */
-.toggle-row{display:flex;align-items:center;gap:9px;margin:1px 0 7px;min-height:18px;}
-.toggle-row label{
-  display:flex;align-items:center;gap:4px;font-size:11px;color:#7f93b3;
-  cursor:pointer;user-select:none;
+/* 分区标签 */
+.sec-label{
+  display:flex;align-items:center;gap:6px;
+  font-size:9px;letter-spacing:2.5px;color:#5c6b80;margin:6px 0 4px;
 }
-.toggle-row .flt-btn{margin-left:auto;}
+.sec-label::after{content:"";flex:1;height:1px;background:#1d2736;}
 
 /* 全局复选框: 未勾选=暗色小方框, 勾选=霓虹填充+对勾 */
 input[type=checkbox]{
@@ -178,16 +178,22 @@ input[type=checkbox]:checked::after{
   border:solid #0c1119;border-width:0 1.5px 1.5px 0;
   transform:rotate(45deg);
 }
-.flt-btn{
-  margin-left:auto;background:#182130;border:1px solid #2a3650;color:#7f93b3;
-  font-size:10px;border-radius:6px;padding:2px 7px;cursor:pointer;letter-spacing:.5px;
+/* 模式胶囊开关: FIXED / SYNC / FLT / LFO */
+.chip-row{display:flex;gap:4px;margin:6px 0 7px;}
+.chip{
+  flex:1;background:#141b28;border:1px solid #26334c;color:#7286a3;
+  font-size:9.5px;letter-spacing:.8px;border-radius:20px;padding:3.5px 0;text-align:center;
+  cursor:pointer;transition:all .12s;user-select:none;
 }
-.flt-btn:hover{border-color:#3b5079;color:#cfe3ff;}
-.flt-btn.on{color:var(--val);border-color:#2f6b57;background:#12281f;}
+.chip:hover{border-color:#3b5079;color:#cfe3ff;}
+.chip.on{
+  background:#12281f;border-color:#2f8f5f;color:#8ff5c8;
+  box-shadow:0 0 9px rgba(57,217,138,.28);
+}
 
 /* 算子展开高级面板 */
 .exp-bar{
-  display:block;width:auto;height:11px;margin:6px -12px -12px;
+  display:block;width:auto;height:11px;margin:6px -10px -10px;
   background:#1a2334;border:0;border-top:1px solid #222d40;
   border-radius:0 0 9px 9px;cursor:pointer;position:relative;
   transition:background .12s;
@@ -214,7 +220,7 @@ input[type=checkbox]:checked::after{
 .adv-panel .prow{cursor:ew-resize;}
 
 /* 参数滑块行 */
-.prow{display:flex;align-items:center;height:21px;gap:8px;cursor:ew-resize;}
+.prow{display:flex;align-items:center;height:20px;gap:7px;cursor:ew-resize;}
 .pl{width:46px;font-size:11px;color:#647691;flex:0 0 auto;letter-spacing:.3px;}
 .pt{flex:1;position:relative;height:14px;}
 .pt::before{ /* 轨道 */

@@ -511,40 +511,10 @@
     xBtn.addEventListener("pointerdown", e => e.stopPropagation());
     xBtn.addEventListener("click", e => { e.stopPropagation(); G.removeNode(id); });
 
-    // 波形选择在最上, 其次开关行(Fixed/Sync/FLT, 折叠态可见)
+    // 波形选择
     makeWaveRow(node);
-    const trow = el("div", "toggle-row", node.bodyEl);
-    const mkCheck = (label, title) => {
-      const lb = el("label", "tcb", trow);
-      lb.title = title;
-      const cb = el("input", "", lb);
-      cb.type = "checkbox";
-      lb.appendChild(document.createTextNode(label));
-      cb.addEventListener("pointerdown", e => e.stopPropagation());
-      return cb;
-    };
-    const cbFixed = mkCheck("Fixed", "固定频率模式(不勾选=按比率跟随音高)");
-    const cbSync = mkCheck("Sync", "相位同步: 音符触发时相位归零");
-    const flBtn = el("button", "flt-btn", trow);
-    flBtn.title = "输出滤波: 不启用 → 低通 → 高通 循环切换(配置在高级面板)";
-    flBtn.addEventListener("pointerdown", e => e.stopPropagation());
-    flBtn.addEventListener("click", e => {
-      e.stopPropagation();
-      node.p.filter = ((node.p.filter | 0) + 1) % 3;
-      refreshRows();
-      G.paramChanged(node, "filter");
-    });
-    cbFixed.addEventListener("change", () => {
-      node.p.freqMode = cbFixed.checked ? 1 : 0;
-      refreshRows();
-      G.paramChanged(node, "freqMode");
-    });
-    cbSync.addEventListener("change", () => {
-      node.p.sync = cbSync.checked;
-      G.paramChanged(node, "sync");
-    });
 
-    // 主要滑条(折叠态)
+    // 核心滑条(折叠态)
     const rowEls = {};
     for (const s of OP_PARAMS) {
       if (["ratio", "fixedHz", "detune", "level", "fb"].includes(s.k))
@@ -555,32 +525,34 @@
     const adv = el("div", "adv-panel", node.bodyEl);
     adv.style.display = "none";
 
-    // ADSR 可视化 + 旋钮
+    // ENVELOPE: ADSR 图形 + 旋钮
+    const envLabel = el("div", "sec-label", adv);
+    envLabel.textContent = "ENVELOPE";
     const adsr = makeAdsrPanel(node);
     adv.appendChild(adsr.el);
     const knobRow = el("div", "knob-row", adv);
     const knobs = ["a", "d", "s", "r"].map(k => makeKnob(node, specOf(k)));
     knobs.forEach(kn => knobRow.appendChild(kn.el));
 
+    // 模式胶囊开关: FIXED / SYNC / FLT / LFO
+    const chipRow = el("div", "chip-row", adv);
+    const mkChip = (label, title) => {
+      const b = el("button", "chip", chipRow);
+      b.textContent = label; b.title = title;
+      b.addEventListener("pointerdown", e => e.stopPropagation());
+      return b;
+    };
+    const chFixed = mkChip("FIXED", "固定频率模式(关闭=按比率跟随音高)");
+    const chSync = mkChip("SYNC", "相位同步: 音符触发时相位归零");
+    const chFlt = mkChip("FLT", "输出滤波: 点击循环 不启用 → 低通 → 高通");
+    const chLfo = mkChip("LFO", "每算子 LFO → 调制该算子音高(颤音)");
+
     // 滤波配置(FLT 启用时显示)
     rowEls.fcut = makeSliderRow(node, specOf("fcut"), adv);
 
-    // LFO 区块(可展开收回)
-    const lfoHead = el("div", "toggle-row", adv);
-    const lbLfo = el("label", "tcb", lfoHead);
-    lbLfo.title = "每算子 LFO → 调制该算子音高(颤音)";
-    const cbLfo = el("input", "", lbLfo);
-    cbLfo.type = "checkbox";
-    cbLfo.checked = !!node.p.lfoOn;
-    lbLfo.appendChild(document.createTextNode("LFO"));
-    cbLfo.addEventListener("pointerdown", e => e.stopPropagation());
-    cbLfo.addEventListener("change", () => {
-      node.p.lfoOn = cbLfo.checked;
-      lfoCfg.style.display = node.p.lfoOn ? "" : "none";
-      G.paramChanged(node, "lfoOn");
-    });
+    // LFO 配置(LFO 启用时显示)
     const lfoCfg = el("div", "lfo-cfg", adv);
-    lfoCfg.style.display = node.p.lfoOn ? "" : "none";
+    lfoCfg.style.display = "none";
     makeSegRow(node, ["Sin", "Tri", "Sqr", "Saw"], "lwave", lfoCfg);
     makeSliderRow(node, { k: "lrate", label: "Rate", min: 0.1, max: 20, step: 0.1, def: 4.5, fmt: "hz" }, lfoCfg);
     makeSliderRow(node, { k: "ldepth", label: "Depth", min: 0, max: 100, step: 1, def: 25, fmt: "int" }, lfoCfg);
@@ -598,18 +570,38 @@
       G.requestWires();
     });
 
+    chFixed.addEventListener("click", () => {
+      node.p.freqMode = node.p.freqMode ? 0 : 1;
+      refreshRows(); G.paramChanged(node, "freqMode");
+    });
+    chSync.addEventListener("click", () => {
+      node.p.sync = !node.p.sync;
+      refreshRows(); G.paramChanged(node, "sync");
+    });
+    chFlt.addEventListener("click", () => {
+      node.p.filter = ((node.p.filter | 0) + 1) % 3;
+      refreshRows(); G.paramChanged(node, "filter");
+    });
+    chLfo.addEventListener("click", () => {
+      node.p.lfoOn = !node.p.lfoOn;
+      refreshRows(); G.paramChanged(node, "lfoOn");
+    });
+
     node._refreshAdv = () => { adsr.draw(); knobs.forEach(k => k.draw()); };
     addPort(node, "in");
     addPort(node, "out");
 
     function refreshRows() {
-      cbFixed.checked = !!node.p.freqMode;
-      cbSync.checked = node.p.sync !== false;
+      chFixed.classList.toggle("on", !!node.p.freqMode);
+      chSync.classList.toggle("on", node.p.sync !== false);
       const fl = node.p.filter | 0;
-      flBtn.textContent = fl === 1 ? "LP" : fl === 2 ? "HP" : "FLT·OFF";
-      flBtn.classList.toggle("on", fl > 0);
+      chFlt.textContent = fl === 1 ? "LP" : fl === 2 ? "HP" : "FLT";
+      chFlt.classList.toggle("on", fl > 0);
+      chLfo.classList.toggle("on", !!node.p.lfoOn);
       rowEls.ratio.style.display = node.p.freqMode ? "none" : "";
       rowEls.fixedHz.style.display = node.p.freqMode ? "" : "none";
+      rowEls.fcut.style.display = fl ? "" : "none";
+      lfoCfg.style.display = node.p.lfoOn ? "" : "none";
     }
     node.syncMode = refreshRows;
     refreshRows();
