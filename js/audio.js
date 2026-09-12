@@ -62,7 +62,14 @@ window.FX_SPECS = {
   /* ---------------- 初始化 ---------------- */
   A.init = async function () {
     if (A.ready) return;
-    const ctx = A.ctx = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: "interactive" });
+    // 系统一律使用 96kHz(设备不支持时浏览器自动重采样到硬件频率)
+    let ctx;
+    try {
+      ctx = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: "interactive", sampleRate: 96000 });
+    } catch (e) {
+      ctx = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: "interactive" });
+    }
+    A.ctx = ctx;
     await Promise.all([
       ctx.audioWorklet.addModule("js/worklet-fm.js"),
       ctx.audioWorklet.addModule("js/worklet-grain.js"),
@@ -94,6 +101,8 @@ window.FX_SPECS = {
     for (let i = 0; i < A.maxVoices; i++) A.makeVoice();
 
     A.ready = true;
+    const sr = document.getElementById("srLabel");
+    if (sr) sr.textContent = (ctx.sampleRate / 1000).toFixed(1).replace(/\.0$/, "") + "kHz";
     if (Aether.Graph) {
       try { A.syncPatch(); } catch (e) { console.error("syncPatch", e); }
     }
@@ -105,7 +114,14 @@ window.FX_SPECS = {
       try { await A.init(); }
       catch (e) { console.error(e); Aether.toast("音频初始化失败: " + e.message); return false; }
     }
-    if (A.ctx.state === "suspended") { try { await A.ctx.resume(); } catch (e) {} }
+    if (A.ctx.state === "suspended") {
+      try { await A.ctx.resume(); } catch (e) {}
+      // resume 返回后时钟可能仍停在 0(输出流延迟启动), 等它真正走动
+      for (let i = 0; i < 20 && A.ctx.currentTime === 0; i++) {
+        await new Promise(r => setTimeout(r, 25));
+      }
+    }
+    return true;
     return true;
   };
 
