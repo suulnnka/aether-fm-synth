@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Aether FM · FM 合成器工作站</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header id="topbar">
+  <div class="brand">AETHER<span>FM</span></div>
+
+  <div class="tb-group">
+    <select id="presetSel" title="音色预设"></select>
+    <button id="saveBtn" class="tbtn" title="保存当前音色到浏览器">💾 保存</button>
+    <button id="randBtn" class="tbtn" title="随机生成音色 · 开盲盒">🎲 随机</button>
+  </div>
+
+  <div class="tb-sep"></div>
+
+  <div class="tb-group">
+    <button id="addOpBtn" class="tbtn accent" title="新增一个 FM 算子">＋ 算子</button>
+    <div class="dropdown" id="addFxDd">
+      <button class="tbtn accent">＋ 效果 ▾</button>
+      <div class="menu" id="addFxMenu"></div>
+    </div>
+  </div>
+
+  <div class="tb-sep"></div>
+
+  <div class="tb-group transport">
+    <button id="playBtn" class="tbtn" title="播放音序器(空格)">▶ 播放</button>
+    <button id="stopBtn" class="tbtn" title="停止">■</button>
+    <label class="tlabel">BPM <input id="bpmInput" type="number" min="20" max="300" value="120"></label>
+  </div>
+
+  <div class="tb-flex"></div>
+
+  <div class="tb-group">
+    <label class="tlabel">MIDI <select id="midiSel"><option value="">内置键盘</option></select></label>
+    <button id="midiRefresh" class="tbtn" title="刷新 MIDI 设备列表">⟳</button>
+  </div>
+  <button id="helpBtn" class="tbtn round" title="帮助">?</button>
+</header>
+
+<div id="stage">
+  <!-- ============ 节点图 ============ -->
+  <div id="viewport">
+    <div id="world">
+      <svg id="wires" width="2" height="2"></svg>
+      <div id="nodes"></div>
+    </div>
+    <div id="zoomCtl">
+      <button data-z="in">＋</button>
+      <button data-z="out">－</button>
+      <button data-z="fit" title="重置视图">⌂</button>
+    </div>
+    <div id="graphHint">拖动标题移动模块 · 从右侧圆点拖到左侧圆点建立连线 · 双击连线删除 · 滚轮缩放 · 空白处拖动平移</div>
+  </div>
+
+  <!-- ============ 底部停靠区 ============ -->
+  <div id="dock">
+    <div id="dockGrip" title="拖动调整高度"></div>
+    <div id="dockBar">
+      <div id="dockTabs">
+        <button class="dt active" data-tab="kb">🎹 键盘</button>
+        <button class="dt" data-tab="seq">🎼 音序器</button>
+      </div>
+      <div id="dockInfo">点击页面任意处以启用音频 · 电脑键盘 A W S E D F T G Y H U J K 弹奏 · Z / X 切换八度 · 按住空格延音</div>
+    </div>
+
+    <div id="kbPanel" class="dpanel">
+      <div id="kbCtl">
+        <button id="octDown" class="tbtn">−</button>
+        <span id="octLabel">C3 – C5</span>
+        <button id="octUp" class="tbtn">＋</button>
+        <label class="tlabel">力度 <input id="velSlider" type="range" min="1" max="127" value="100"></label>
+        <span id="heldInfo"></span>
+      </div>
+      <div id="kbKeys"></div>
+    </div>
+
+    <div id="seqPanel" class="dpanel hidden">
+      <div id="seqBar">
+        <label class="tlabel">吸附 <select id="snapSel">
+          <option value="4">小节</option>
+          <option value="2">1/2</option>
+          <option value="1">1/4</option>
+          <option value="0.5">1/8</option>
+          <option value="0.25" selected>1/16</option>
+        </select></label>
+        <label class="tlabel">音阶 <select id="scaleSel"></select></label>
+        <label class="tlabel">根音 <select id="rootSel"></select></label>
+        <label class="tlabel">小节 <input id="loopBars" type="number" min="1" max="999" value="8"></label>
+        <label class="chk"><input type="checkbox" id="autoLoop" checked>自动长度</label>
+        <label class="tlabel">缩放 <input id="zoomH" type="range" min="8" max="64" value="28"></label>
+        <label class="chk"><input type="checkbox" id="metroChk">节拍器</label>
+        <button id="clearNotes" class="tbtn">清空音符</button>
+        <span class="seq-tip">左键拖动画音符/移动 · 右缘拖动改长度 · 右键删除 · 音阶外琴键自动吸附</span>
+      </div>
+      <div id="rollWrap">
+        <div id="rollKeys"><canvas id="keysCanvas"></canvas></div>
+        <div id="rollArea">
+          <div id="rollScroll">
+            <div id="rollSpacer"></div>
+          </div>
+          <canvas id="rollCanvas"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 帮助 ============ -->
+<div id="modalBack" class="hidden">
+  <div id="modal">
+    <div id="modalTitle">帮助 · Aether FM</div>
+    <div id="modalBody"></div>
+    <div id="modalBtns"><button class="tbtn accent" id="modalOk">知道了</button></div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script src="js/worklet-fm.js"></script>
+<script src="js/worklet-grain.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/graph.js"></script>
+<script src="js/keyboard.js"></script>
+<script src="js/sequencer.js"></script>
+<script src="js/presets.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
