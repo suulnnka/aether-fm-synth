@@ -551,18 +551,6 @@
         rowEls[s.k] = makeSliderRow(node, s);
     }
 
-    // 底部展开按钮
-    const expBar = el("button", "exp-bar", node.bodyEl);
-    expBar.textContent = "▾ 高级";
-    expBar.addEventListener("pointerdown", e => e.stopPropagation());
-    expBar.addEventListener("click", e => {
-      e.stopPropagation();
-      node.expanded = !node.expanded;
-      adv.style.display = node.expanded ? "" : "none";
-      expBar.textContent = node.expanded ? "▴ 收起" : "▾ 高级";
-      G.requestWires();
-    });
-
     // 高级面板(展开显示)
     const adv = el("div", "adv-panel", node.bodyEl);
     adv.style.display = "none";
@@ -596,6 +584,19 @@
     makeSegRow(node, ["Sin", "Tri", "Sqr", "Saw"], "lwave", lfoCfg);
     makeSliderRow(node, { k: "lrate", label: "Rate", min: 0.1, max: 20, step: 0.1, def: 4.5, fmt: "hz" }, lfoCfg);
     makeSliderRow(node, { k: "ldepth", label: "Depth", min: 0, max: 100, step: 1, def: 25, fmt: "int" }, lfoCfg);
+
+    // 收起条: 紧贴卡片底边, 中间三角指示方向(展开态朝上)
+    const expBar = el("button", "exp-bar open", node.bodyEl);
+    expBar.title = "展开 / 收起高级面板";
+    expBar.addEventListener("pointerdown", e => e.stopPropagation());
+    expBar.addEventListener("click", e => {
+      e.stopPropagation();
+      node.expanded = !node.expanded;
+      adv.style.display = node.expanded ? "" : "none";
+      expBar.classList.toggle("open", node.expanded);
+      if (node.expanded) G.resolveOverlaps(node.id); // 展开后自动排版, 避免遮挡下方组件
+      G.requestWires();
+    });
 
     node._refreshAdv = () => { adsr.draw(); knobs.forEach(k => k.draw()); };
     addPort(node, "in");
@@ -689,6 +690,37 @@
     G.syncAudio();
     G.requestWires();
     G.onChange && G.onChange();
+  };
+
+  /* ---- 展开面板后自动排版: 把与被展开节点相交的组件依次向下推移(级联) ---- */
+  G.resolveOverlaps = function (srcId) {
+    const GAP = 12;
+    const rects = new Map();
+    const rectOf = id => {
+      if (!rects.has(id)) {
+        const n = G.nodes.get(id);
+        rects.set(id, { x: n.x, y: n.y, w: n.el.offsetWidth, h: n.el.offsetHeight });
+      }
+      return rects.get(id);
+    };
+    const hit = (a, b) =>
+      a.x < b.x + b.w + GAP && a.x + a.w + GAP > b.x &&
+      a.y < b.y + b.h + GAP && a.y + a.h + GAP > b.y;
+    const queue = [srcId];
+    let guard = 0;
+    while (queue.length && guard++ < 40) {   // 位移单调向下, 必然收敛
+      const id = queue.shift();
+      const a = rectOf(id);
+      for (const n of G.nodes.values()) {
+        if (n.id === id) continue;
+        const b = rectOf(n.id);
+        if (!hit(a, b)) continue;
+        b.y = a.y + a.h + GAP;
+        n.y = b.y;
+        n.el.style.top = b.y + "px";
+        queue.push(n.id);                    // 级联: 被推移的节点继续检查
+      }
+    }
   };
 
   /* ---- 参数变化分发 ---- */

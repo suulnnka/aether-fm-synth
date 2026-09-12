@@ -187,11 +187,23 @@ input[type=checkbox]:checked::after{
 
 /* 算子展开高级面板 */
 .exp-bar{
-  display:block;width:100%;margin-top:6px;background:#151d2b;border:1px solid #26334c;
-  color:#8296b4;font-size:10px;border-radius:7px;padding:3px 0;cursor:pointer;
-  letter-spacing:2px;text-align:center;
+  display:block;width:auto;height:11px;margin:6px -12px -12px;
+  background:#1a2334;border:0;border-top:1px solid #222d40;
+  border-radius:0 0 9px 9px;cursor:pointer;position:relative;
+  transition:background .12s;
 }
-.exp-bar:hover{border-color:#3b5079;color:#cfe3ff;}
+.exp-bar:hover{background:#212c42;}
+.exp-bar::after{
+  content:"";position:absolute;left:50%;top:50%;
+  transform:translate(-50%,-30%);
+  border-left:5px solid transparent;border-right:5px solid transparent;
+  border-top:5px solid #5c6b80;
+}
+.exp-bar.open::after{
+  transform:translate(-50%,-70%);
+  border-top:0;
+  border-bottom:5px solid #8ff5c8;
+}
 .adv-panel{margin-top:8px;padding-top:6px;border-top:1px dashed #26334c;}
 .adsr-wrap{margin-bottom:2px;}
 .adsr-cv{display:block;width:100%;height:66px;cursor:crosshair;touch-action:none;}
