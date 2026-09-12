@@ -467,7 +467,12 @@
     canvas.addEventListener("wheel", e => {
       e.preventDefault();
       if (e.ctrlKey || e.metaKey) {
-        SC.ppb = Math.min(64, Math.max(8, SC.ppb * Math.exp(-e.deltaY * 0.0025)));
+        // 触摸板捏合: 归一化 deltaMode、单事件限幅、降低灵敏度
+        let dy = e.deltaY;
+        if (e.deltaMode === 1) dy *= 16;
+        else if (e.deltaMode === 2) dy *= 100;
+        dy = Math.max(-60, Math.min(60, dy));
+        SC.ppb = Math.min(64, Math.max(8, SC.ppb * Math.exp(-dy * 0.0035)));
         document.getElementById("zoomH").value = SC.ppb;
         updateSpacer();
       } else if (e.shiftKey) {

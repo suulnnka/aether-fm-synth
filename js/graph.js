@@ -1023,11 +1023,23 @@
     window.addEventListener("pointerup", vpUp);
     window.addEventListener("pointercancel", vpUp);
     // 触摸板/鼠标: 滚动=平移, Ctrl+滚轮(触摸板捏合)=缩放
+    // 触摸板捏合是高频小增量 Ctrl+滚轮: 归一化 deltaMode、单事件限幅、降低灵敏度
+    let lastPinchAt = 0;
+    const wheelFactor = e => {
+      let dy = e.deltaY;
+      if (e.deltaMode === 1) dy *= 16;        // 行
+      else if (e.deltaMode === 2) dy *= 100;  // 页
+      dy = Math.max(-60, Math.min(60, dy));   // 单事件限幅, 防跳变
+      return Math.exp(-dy * 0.0035);
+    };
     viewport.addEventListener("wheel", e => {
       e.preventDefault();
       if (e.ctrlKey || e.metaKey) {
-        zoomAt(e.clientX, e.clientY, Math.exp(-e.deltaY * 0.0025));
+        lastPinchAt = performance.now();
+        zoomAt(e.clientX, e.clientY, wheelFactor(e));
       } else {
+        // 捏合刚结束时忽略夹带的滚动, 避免缩放中来回跳动
+        if (performance.now() - lastPinchAt < 200) return;
         G.pan.x -= e.deltaX;
         G.pan.y -= e.deltaY;
         applyView();
