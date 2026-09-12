@@ -14,7 +14,6 @@
     sustain: false,
     sustained: new Set(),   // 空格延音挂起的音符
     els: new Map(),
-    pointerHeld: null,
     midiAccess: null, midiInput: null,
   });
 
@@ -96,11 +95,42 @@
       `${noteName(KB.base)} – ${noteName(KB.base + KB.span - 1)}`;
   }
 
-  function keyFromEvent(e) {
-    const key = e.target.closest && e.target.closest(".kb-white,.kb-black");
+  /* ---- 多指触摸: 每个 pointerId 独立对应一个音符(和弦/滑奏) ---- */
+  const kbPointers = new Map(); // pointerId → midi
+
+  function keyAtPoint(x, y) {
+    const el = document.elementFromPoint(x, y);
+    const key = el && el.closest && el.closest(".kb-white,.kb-black");
     if (!key) return null;
-    for (const [m, el] of KB.els) if (el === key) return m;
+    for (const [m, kEl] of KB.els) if (kEl === key) return m;
     return null;
+  }
+
+  function kbDown(e) {
+    const midi = keyAtPoint(e.clientX, e.clientY);
+    if (midi == null) return;
+    e.preventDefault();
+    // 解除触摸的隐式指针捕获, 让滑奏时 pointermove 能自由跟随
+    try { e.target.releasePointerCapture && e.target.releasePointerCapture(e.pointerId); } catch (err) {}
+    if (![...kbPointers.values()].includes(midi)) press(midi, KB.vel / 127, "touch");
+    kbPointers.set(e.pointerId, midi);
+  }
+
+  function kbMove(e) {
+    if (!kbPointers.has(e.pointerId)) return;
+    const cur = kbPointers.get(e.pointerId);
+    const midi = keyAtPoint(e.clientX, e.clientY);
+    if (midi == null || midi === cur) return;
+    release(cur);
+    kbPointers.set(e.pointerId, midi);
+    press(midi, KB.vel / 127, "touch");
+  }
+
+  function kbUp(e) {
+    const midi = kbPointers.get(e.pointerId);
+    if (midi == null) return;
+    kbPointers.delete(e.pointerId);
+    if (![...kbPointers.values()].includes(midi)) release(midi);
   }
 
   /* ---------------- 电脑键盘 ---------------- */
@@ -196,26 +226,12 @@
   KB.init = function () {
     renderKeys();
 
-    // 虚拟琴键事件(委托, renderKeys 重建元素后仍有效)
+    // 虚拟琴键事件(委托, 支持多指和弦与滑奏)
     const box = document.getElementById("kbKeys");
-    box.addEventListener("pointerdown", e => {
-      const midi = keyFromEvent(e);
-      if (midi == null) return;
-      e.preventDefault();
-      KB.pointerHeld = midi;
-      press(midi, KB.vel / 127, "mouse");
-    });
-    box.addEventListener("pointerover", e => {
-      if (KB.pointerHeld == null) return;
-      const midi = keyFromEvent(e);
-      if (midi == null || midi === KB.pointerHeld) return;
-      release(KB.pointerHeld);
-      KB.pointerHeld = midi;
-      press(midi, KB.vel / 127, "mouse");
-    });
-    window.addEventListener("pointerup", () => {
-      if (KB.pointerHeld != null) { release(KB.pointerHeld); KB.pointerHeld = null; }
-    });
+    box.addEventListener("pointerdown", kbDown);
+    box.addEventListener("pointermove", kbMove);
+    window.addEventListener("pointerup", kbUp);
+    window.addEventListener("pointercancel", kbUp);
 
     document.getElementById("octDown").addEventListener("click", () => shiftOctave(-1));
     document.getElementById("octUp").addEventListener("click", () => shiftOctave(1));

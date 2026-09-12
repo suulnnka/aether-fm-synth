@@ -277,12 +277,16 @@
     if (e.button === 1) return;
 
     const n = noteAt(x, y);
+    // 双击/双触删除(手动检测, 兼容触摸屏 pointerdown 无 detail 计数)
+    const now = performance.now();
+    const dbl = !!(n && SC._lastTap && SC._lastTap.note === n && now - SC._lastTap.t < 350);
+    SC._lastTap = n ? { note: n, t: now } : null;
     if (n) {
       const nx = beatToX(n.start), nw = n.dur * SC.ppb;
       if (x > nx + nw - 8) {
         dragN = { note: n, mode: "size" };
-        if (e.detail >= 2) { SC.notes = SC.notes.filter(q => q !== n); dragN = null; }
-      } else if (e.detail >= 2) {
+        if (dbl || e.detail >= 2) { SC.notes = SC.notes.filter(q => q !== n); dragN = null; SC.dirty = true; }
+      } else if (dbl || e.detail >= 2) {
         SC.notes = SC.notes.filter(q => q !== n); SC.dirty = true; return;
       } else {
         dragN = { note: n, mode: "move", grabB: beat - n.start, grabM: n.midi - midi };
@@ -292,7 +296,7 @@
       const m = SC.snapPitch(Math.min(SC.PITCH_MAX, Math.max(SC.PITCH_MIN, midi)));
       const note = { id: SC.nid++, start: Math.max(0, snapFloor(beat)), dur: Math.max(SC.snap, SC.lastDur), midi: m, vel: 0.9 };
       SC.notes.push(note);
-      dragN = { note, mode: "size" };
+      dragN = { note, mode: "new" };   // "new": 若随即转为双指平移, 此音符会被撤销
       Aether.kb.press(m, 0.9, "roll");
       setTimeout(() => Aether.kb.release(m), 160);
     }
@@ -400,17 +404,62 @@
     updateSpacer();
     buildControls();
 
-    canvas.addEventListener("pointerdown", onDown);
-    canvas.addEventListener("pointermove", onMove);
-    window.addEventListener("pointerup", onUp);
+    // 指针跟踪: 单指=编辑音符, 双指=平移卷帘
+    const rollPts = new Map();
+    const centroid = m => {
+      let x = 0, y = 0;
+      for (const p of m.values()) { x += p.x; y += p.y; }
+      return { x: x / m.size, y: y / m.size };
+    };
+    let panPrev = null;
+
+    canvas.addEventListener("pointerdown", e => {
+      rollPts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (rollPts.size === 2) {
+        // 第二根手指落下 → 取消编辑转为平移; 刚新建、尚未拖拽的音符一并撤销
+        if (dragN && dragN.mode === "new") SC.notes = SC.notes.filter(q => q !== dragN.note);
+        dragN = null;
+        panPrev = centroid(rollPts);
+        SC.dirty = true;
+        return;
+      }
+      if (rollPts.size > 2) return;
+      onDown(e);
+    });
+    canvas.addEventListener("pointermove", e => {
+      if (rollPts.has(e.pointerId)) rollPts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (rollPts.size >= 2 && panPrev) {
+        const c = centroid(rollPts);
+        scrollEl.scrollLeft -= c.x - panPrev.x;
+        scrollEl.scrollTop -= c.y - panPrev.y;
+        panPrev = c;
+        SC.dirty = true;
+        return;
+      }
+      if (rollPts.size <= 1) onMove(e);
+    });
+    const rollUp = e => {
+      rollPts.delete(e.pointerId);
+      if (rollPts.size < 2) panPrev = null;
+      if (rollPts.size === 0) onUp(e);
+    };
+    window.addEventListener("pointerup", rollUp);
+    window.addEventListener("pointercancel", rollUp);
     canvas.addEventListener("contextmenu", e => e.preventDefault());
     keysCanvas.addEventListener("pointerdown", keysDown);
     scrollEl.addEventListener("scroll", () => { SC.dirty = true; });
-    // canvas 覆盖层转发滚轮: 滚轮=横向, Shift+滚轮=纵向
+    // 触摸板/鼠标: 滚轮=横向, Shift+滚轮=纵向, Ctrl+滚轮(捏合)=时间缩放
     canvas.addEventListener("wheel", e => {
       e.preventDefault();
-      if (e.shiftKey) scrollEl.scrollTop += e.deltaY;
-      else scrollEl.scrollLeft += (e.deltaY + e.deltaX);
+      if (e.ctrlKey || e.metaKey) {
+        SC.ppb = Math.min(64, Math.max(8, SC.ppb * Math.exp(-e.deltaY * 0.0025)));
+        document.getElementById("zoomH").value = SC.ppb;
+        updateSpacer();
+      } else if (e.shiftKey) {
+        scrollEl.scrollTop += e.deltaY;
+      } else {
+        scrollEl.scrollLeft += (e.deltaY + e.deltaX);
+      }
       SC.dirty = true;
     }, { passive: false });
 

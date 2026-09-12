@@ -272,3 +272,7 @@ path.cable-hit{stroke:transparent;stroke-width:14;}
   backdrop-filter:blur(6px);box-shadow:0 10px 30px rgba(0,0,0,.5);
 }
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+/* ---------------- 触摸支持 ---------------- */
+#kbKeys,#rollCanvas,#keysCanvas,#rollKeys,#dockGrip,.node{touch-action:none;}
+body{-webkit-tap-highlight-color:transparent;}

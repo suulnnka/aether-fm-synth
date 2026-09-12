@@ -692,6 +692,67 @@
     drag = null;
   }
 
+  function cancelDrag() {
+    if (!drag) return;
+    if (drag.type === "node") drag.node.el.classList.remove("dragging");
+    if (drag.type === "pan") viewport.classList.remove("panning");
+    if (drag.type === "cable") document.querySelectorAll(".port.hot").forEach(p => p.classList.remove("hot"));
+    drag = null;
+    G.requestWires();
+  }
+
+  /* ---- 多指(触摸屏): 单指=原有交互, 双指=捏合缩放+平移 ---- */
+  const vPts = new Map(); // pointerId → {x,y}
+  let pinch = null;       // {d0, mid0, zoom0, pan0}
+
+  function vpDown(e) {
+    vPts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (e.pointerType !== "mouse") e.preventDefault();
+    if (vPts.size === 2) {
+      cancelDrag();
+      const [a, b] = [...vPts.values()];
+      pinch = {
+        d0: Math.max(20, Math.hypot(a.x - b.x, a.y - b.y)),
+        mid0: { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 },
+        zoom0: G.zoom, pan0: { ...G.pan },
+      };
+      viewport.classList.add("panning");
+      return;
+    }
+    if (vPts.size > 2) return;
+    onPointerDown(e);
+  }
+
+  function vpMove(e) {
+    if (vPts.has(e.pointerId)) vPts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pinch && vPts.size >= 2) {
+      const [a, b] = [...vPts.values()];
+      const d = Math.hypot(a.x - b.x, a.y - b.y);
+      const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+      const z = Math.min(2, Math.max(0.35, pinch.zoom0 * d / pinch.d0));
+      // 初始中点的世界坐标跟随双指中心移动
+      const w = {
+        x: (pinch.mid0.x - pinch.pan0.x) / pinch.zoom0,
+        y: (pinch.mid0.y - pinch.pan0.y) / pinch.zoom0,
+      };
+      G.zoom = z;
+      G.pan.x = mid.x - w.x * z;
+      G.pan.y = mid.y - w.y * z;
+      applyView();
+      return;
+    }
+    if (!pinch) onPointerMove(e);
+  }
+
+  function vpUp(e) {
+    vPts.delete(e.pointerId);
+    if (pinch) {
+      if (vPts.size < 2) { pinch = null; viewport.classList.remove("panning"); }
+      return;
+    }
+    onPointerUp(e);
+  }
+
   /* ================= 初始化 ================= */
   G.init = function () {
     viewport = document.getElementById("viewport");
@@ -699,13 +760,22 @@
     wiresSvg = document.getElementById("wires");
     nodesEl = document.getElementById("nodes");
 
-    viewport.addEventListener("pointerdown", onPointerDown);
-    window.addEventListener("pointermove", onPointerMove);
-    window.addEventListener("pointerup", onPointerUp);
+    viewport.addEventListener("pointerdown", vpDown);
+    window.addEventListener("pointermove", vpMove);
+    window.addEventListener("pointerup", vpUp);
+    window.addEventListener("pointercancel", vpUp);
+    // 触摸板/鼠标: 滚动=平移, Ctrl+滚轮(触摸板捏合)=缩放
     viewport.addEventListener("wheel", e => {
       e.preventDefault();
-      zoomAt(e.clientX, e.clientY, e.deltaY < 0 ? 1.1 : 1 / 1.1);
+      if (e.ctrlKey || e.metaKey) {
+        zoomAt(e.clientX, e.clientY, Math.exp(-e.deltaY * 0.0025));
+      } else {
+        G.pan.x -= e.deltaX;
+        G.pan.y -= e.deltaY;
+        applyView();
+      }
     }, { passive: false });
+    viewport.addEventListener("gesturestart", e => e.preventDefault());
     viewport.addEventListener("contextmenu", e => e.preventDefault());
 
     document.getElementById("zoomCtl").addEventListener("click", e => {
