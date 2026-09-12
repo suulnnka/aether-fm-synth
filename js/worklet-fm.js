@@ -46,12 +46,15 @@ if (typeof AudioWorkletProcessor === "function") {
         case "config": {
           const old = this.ops;
           this.ops = d.ops.map((o, i) => {
-            const p = old[i] || { phase: 0, v: 0, st: OFF, prev: 0 };
+            const p = old[i] || { phase: 0, v: 0, st: OFF, prev: 0, lp: 0 };
             return {
               w: o.w | 0, ratio: o.ratio, det: o.det, lvl: o.lvl,
               fb: o.fb, a: Math.max(0.001, o.a), d: Math.max(0.005, o.d),
               s: o.s, r: Math.max(0.01, o.r), fm: !!o.fm, fhz: o.fhz, en: !!o.en,
-              phase: p.phase, v: p.v, st: p.st, prev: p.prev
+              sy: o.sy !== false,                 // 相位同步(默认开)
+              fl: o.fl | 0,                       // 输出滤波 0=关 1=低通 2=高通
+              fc: o.fc || 8000,                   // 截止频率
+              phase: p.phase, v: p.v, st: p.st, prev: p.prev, lp: p.lp || 0, fa: 0
             };
           });
           this.conns = d.conns.map(c => [c[0] | 0, c[1] | 0]);
@@ -78,11 +81,14 @@ if (typeof AudioWorkletProcessor === "function") {
 
     recalcIncs() {
       const baseF = 440 * Math.pow(2, (this.note - 69) / 12);
-      this.incs = this.ops.map(o => {
+      for (const o of this.ops) {
         const det = Math.pow(2, o.det / 1200);
         const f = o.fm ? o.fhz : baseF * o.ratio; // 固定频率模式不随音高
-        return TAU * f * det / sampleRate;
-      });
+        o.inc = TAU * f * det / sampleRate;
+        // 一阶滤波系数(每个采样点按 1-e^-ωt 逼近)
+        o.fa = 1 - Math.exp(-TAU * Math.min(20000, o.fc) / sampleRate);
+      }
+      this.incs = this.ops.map(o => o.inc);
     }
 
     fire(e) {
@@ -90,7 +96,10 @@ if (typeof AudioWorkletProcessor === "function") {
         this.gate = true;
         if ((e.note | 0) !== this.note) { this.note = e.note | 0; this.recalcIncs(); }
         this.vel = e.vel;
-        for (const o of this.ops) { o.st = ATT; o.v = 0; o.prev = 0; }
+        for (const o of this.ops) {
+          o.st = ATT; o.v = 0; o.prev = 0;
+          if (o.sy) o.phase = 0;       // 相位同步: 触发时归零
+        }
       } else {
         this.gate = false;
         for (const o of this.ops) if (o.st !== OFF) o.st = REL;
@@ -150,7 +159,15 @@ if (typeof AudioWorkletProcessor === "function") {
           }
           if (o.fb > 0) m += o.prev * (o.fb / 99) * FBSCALE;
 
-          const val = o.v * (o.lvl / 99) * WAVES[o.w & 3](o.phase + m);
+          let val = o.v * (o.lvl / 99) * WAVES[o.w & 3](o.phase + m);
+
+          // --- 每算子输出滤波(一阶 LP/HP) ---
+          if (o.fl) {
+            o.lp += o.fa * (val - o.lp);
+            if (o.fl === 1) val = o.lp;         // 低通
+            else val = val - o.lp;              // 高通
+          }
+
           o.prev = val;
           s += val;
         }

@@ -31,6 +31,7 @@
     { k: "detune",  label: "Detune", min: -50,  max: 50,   step: 0.5,  def: 0,    fmt: "cent" },
     { k: "level",   label: "Level",  min: 0,    max: 99,   step: 1,    def: 80,   fmt: "int"  },
     { k: "fb",      label: "FB",     min: 0,    max: 99,   step: 1,    def: 0,    fmt: "int"  },
+    { k: "fcut",    label: "Cutoff", min: 60,   max: 14000,step: 10,   def: 8000, fmt: "hz2", log: true },
     { k: "a",       label: "A",      min: 0,    max: 4000, step: 5,    def: 5,    fmt: "ms"   },
     { k: "d",       label: "D",      min: 5,    max: 4000, step: 5,    def: 400,  fmt: "ms"   },
     { k: "s",       label: "S",      min: 0,    max: 99,   step: 1,    def: 70,   fmt: "int"  },
@@ -324,39 +325,65 @@
     for (const s of OP_PARAMS) node.p[s.k] = opts.p && opts.p[s.k] !== undefined ? opts.p[s.k] : s.def;
     node.p.wave = opts.p && opts.p.wave !== undefined ? opts.p.wave : 0;
     node.p.freqMode = opts.p && opts.p.freqMode !== undefined ? opts.p.freqMode : 0;
+    node.p.sync = opts.p && opts.p.sync !== undefined ? !!opts.p.sync : true;
+    node.p.filter = opts.p && opts.p.filter !== undefined ? (opts.p.filter | 0) : 0;
     node.p.enabled = opts.p && opts.p.enabled !== undefined ? opts.p.enabled : true;
 
-    const modeBtn = el("button", "n-hbtn", node.headEl);
-    modeBtn.textContent = "R"; modeBtn.title = "频率模式: R=比率 / Hz=固定频率";
-    modeBtn.addEventListener("pointerdown", e => e.stopPropagation());
-    modeBtn.addEventListener("click", e => {
-      e.stopPropagation();
-      node.p.freqMode = node.p.freqMode ? 0 : 1;
-      syncMode();
-      G.paramChanged(node, "freqMode");
-    });
     const xBtn = el("button", "n-hbtn n-x", node.headEl);
     xBtn.textContent = "×"; xBtn.title = "删除算子";
     xBtn.addEventListener("pointerdown", e => e.stopPropagation());
     xBtn.addEventListener("click", e => { e.stopPropagation(); G.removeNode(id); });
-    node.modeBtn = modeBtn;
 
-    function syncMode() {
-      modeBtn.textContent = node.p.freqMode ? "Hz" : "R";
-      modeBtn.classList.toggle("mode-on", !!node.p.freqMode);
-      node.bodyEl.querySelectorAll(".prow").forEach(r => {
-        const k = r.dataset.k;
-        const show = node.p.freqMode ? k !== "ratio" : k !== "fixedHz";
-        r.style.display = show ? "" : "none";
-      });
-    }
-    node.syncMode = syncMode;
+    // 开关行: Fixed(固定频率) / Sync(相位同步) / 输出滤波循环按钮
+    const trow = el("div", "toggle-row", node.bodyEl);
+    const mkCheck = (label, title) => {
+      const lb = el("label", "tcb", trow);
+      lb.title = title;
+      const cb = el("input", "", lb);
+      cb.type = "checkbox";
+      lb.appendChild(document.createTextNode(label));
+      cb.addEventListener("pointerdown", e => e.stopPropagation());
+      return cb;
+    };
+    const cbFixed = mkCheck("Fixed", "固定频率模式(不勾选=按比率跟随音高)");
+    const cbSync = mkCheck("Sync", "相位同步: 音符触发时相位归零");
+    const flBtn = el("button", "flt-btn", trow);
+    flBtn.title = "输出滤波: 不启用 → 低通 → 高通 循环切换";
+    flBtn.addEventListener("pointerdown", e => e.stopPropagation());
+    flBtn.addEventListener("click", e => {
+      e.stopPropagation();
+      node.p.filter = ((node.p.filter | 0) + 1) % 3;
+      refreshRows();
+      G.paramChanged(node, "filter");
+    });
+    cbFixed.addEventListener("change", () => {
+      node.p.freqMode = cbFixed.checked ? 1 : 0;
+      refreshRows();
+      G.paramChanged(node, "freqMode");
+    });
+    cbSync.addEventListener("change", () => {
+      node.p.sync = cbSync.checked;
+      G.paramChanged(node, "sync");
+    });
 
+    const rowEls = {};
     makeWaveRow(node);
-    for (const s of OP_PARAMS) makeSliderRow(node, s);
+    for (const s of OP_PARAMS) rowEls[s.k] = makeSliderRow(node, s);
     addPort(node, "in");
     addPort(node, "out");
-    syncMode();
+
+    function refreshRows() {
+      cbFixed.checked = !!node.p.freqMode;
+      cbSync.checked = node.p.sync !== false;
+      const fl = node.p.filter | 0;
+      flBtn.textContent = fl === 1 ? "LP" : fl === 2 ? "HP" : "FLT·OFF";
+      flBtn.classList.toggle("on", fl > 0);
+      rowEls.ratio.style.display = node.p.freqMode ? "none" : "";
+      rowEls.fixedHz.style.display = node.p.freqMode ? "" : "none";
+      rowEls.fcut.style.display = fl ? "" : "none";
+    }
+    node.syncMode = refreshRows;
+    refreshRows();
     node.refreshEnabled(node);
     return node;
   };
@@ -521,6 +548,7 @@
         w: n.p.wave | 0, ratio: n.p.ratio, det: n.p.detune, lvl: n.p.level,
         fb: n.p.fb, a: n.p.a / 1000, d: n.p.d / 1000, s: n.p.s / 99, r: n.p.r / 1000,
         fm: n.p.freqMode === 1, fhz: n.p.fixedHz, en: n.p.enabled !== false,
+        sy: n.p.sync !== false, fl: n.p.filter | 0, fc: n.p.fcut || 8000,
       })),
       conns, carriers,
     };
