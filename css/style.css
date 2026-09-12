@@ -97,15 +97,15 @@ input[type=range]{accent-color:var(--accent);width:90px;}
 /* ---------------- 节点卡片 ---------------- */
 .node{
   position:absolute;width:236px;background:linear-gradient(180deg,#131a26,#0e131c);
-  border:1px solid #232e42;border-radius:11px;
+  border:1px solid #232e42;border-radius:0 0 11px 11px;
   box-shadow:0 8px 26px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.03);
   cursor:grab;
 }
 .node.dragging{cursor:grabbing;box-shadow:0 16px 40px rgba(0,0,0,.7);}
-.node::before{ /* 顶部彩色条 */
-  content:"";position:absolute;left:8px;right:8px;top:-1px;height:3px;border-radius:3px;
+.node::before{ /* 顶部霓虹条: 与卡片同宽, 顶角为直角 */
+  content:"";position:absolute;left:0;right:0;top:-1px;height:3px;
   background:var(--ac);box-shadow:0 0 10px var(--ac);
-  opacity:.85;
+  opacity:.9;
 }
 .node.off{opacity:.45;filter:saturate(.4);}
 .n-head{
