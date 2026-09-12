@@ -171,6 +171,77 @@ function showHelp() {
     songSel.value = "";
   });
 
+  // 连接方式下拉(DX7 式算法, 附小图)
+  const algoDd = document.getElementById("algoDd");
+  const algoMenu = document.getElementById("algoMenu");
+  function drawAlgoCv(cv, alg) {
+    const W = 46, H = 48, DPR = Math.min(2, devicePixelRatio || 1);
+    cv.width = W * DPR; cv.height = H * DPR;
+    cv.style.width = W + "px"; cv.style.height = H + "px";
+    const g = cv.getContext("2d");
+    g.setTransform(DPR, 0, 0, DPR, 0, 0);
+    g.clearRect(0, 0, W, H);
+    const bx = 22, bw = 16, bh = 5, dy = 7.2, y0 = 3;
+    const yOf = op => y0 + (op - 1) * dy;
+    const isC = op => alg.carriers.includes(op);
+    for (let op = 1; op <= 6; op++) {
+      const y = yOf(op);
+      if (isC(op)) {
+        g.strokeStyle = "#39d98a"; g.lineWidth = 1;
+        g.beginPath(); g.moveTo(bx - 3, y + bh / 2); g.lineTo(10, y + bh / 2); g.stroke();
+        g.fillStyle = "#39d98a";
+        g.beginPath(); g.arc(9, y + bh / 2, 1.5, 0, 7); g.fill();
+      }
+      g.fillStyle = isC(op) ? "#1d3a2c" : "#141b28";
+      g.fillRect(bx, y, bw, bh);
+      g.strokeStyle = isC(op) ? "#39d98a" : "#3a4c6d"; g.lineWidth = 0.8;
+      g.strokeRect(bx, y, bw, bh);
+      g.fillStyle = isC(op) ? "#9df5c9" : "#7f93b3";
+      g.font = "6px Consolas";
+      g.fillText(String(op), bx + 6, y + bh - 1.2);
+    }
+    for (const [f, t] of alg.mods) {
+      const yF = yOf(f) + bh / 2, yT = yOf(t) + bh / 2;
+      g.strokeStyle = "#5aa9ff"; g.fillStyle = "#5aa9ff"; g.lineWidth = 1;
+      if (t === f - 1) {
+        const cx = bx + bw / 2;
+        g.beginPath(); g.moveTo(cx, yOf(f)); g.lineTo(cx, yOf(t) + bh + 1); g.stroke();
+        g.beginPath(); g.moveTo(cx - 1.5, yOf(t) + bh + 2); g.lineTo(cx + 1.5, yOf(t) + bh + 2); g.lineTo(cx, yOf(t) + bh); g.closePath(); g.fill();
+      } else {
+        g.beginPath();
+        g.moveTo(bx + bw, yF); g.lineTo(W - 2, yF); g.lineTo(W - 2, yT); g.lineTo(bx + bw + 3, yT);
+        g.stroke();
+        g.beginPath(); g.moveTo(bx + bw + 1, yT); g.lineTo(bx + bw + 3, yT - 1.5); g.lineTo(bx + bw + 3, yT + 1.5); g.closePath(); g.fill();
+      }
+    }
+  }
+  Aether.Graph.ALGORITHMS.forEach((alg, idx) => {
+    const item = document.createElement("button");
+    item.className = "algo-item";
+    item.title = alg.name;
+    const cv = document.createElement("canvas");
+    item.appendChild(cv);
+    const span = document.createElement("span");
+    span.textContent = alg.name;
+    item.appendChild(span);
+    item.addEventListener("click", async () => {
+      algoDd.classList.remove("open");
+      if (!(await Aether.audio.ensure())) return;
+      Aether.Graph.applyAlgorithm(idx);
+      Aether.toast("已应用连接方式:" + alg.name);
+    });
+    algoMenu.appendChild(item);
+    drawAlgoCv(cv, alg);
+  });
+  algoDd.querySelector("button").addEventListener("click", e => {
+    e.stopPropagation();
+    dd.classList.remove("open");
+    algoDd.classList.toggle("open");
+  });
+  window.addEventListener("pointerdown", e => {
+    if (!algoDd.contains(e.target)) algoDd.classList.remove("open");
+  });
+
   // 帮助
   document.getElementById("helpBtn").addEventListener("click", showHelp);
   document.getElementById("modalBack").addEventListener("pointerdown", e => {

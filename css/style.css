@@ -102,6 +102,16 @@ input[type=range]{accent-color:var(--accent);width:90px;}
 }
 .dropdown .menu button:hover{background:var(--ctl-bg-h);color:var(--ink-1);}
 
+/* 连接方式菜单(带小图) */
+#algoMenu{min-width:200px;max-height:70vh;overflow:auto;}
+#algoMenu .algo-item{
+  display:flex;align-items:center;gap:8px;width:100%;height:auto;line-height:normal;
+  background:none;border:0;padding:4px 8px;border-radius:var(--ctl-r);
+  cursor:pointer;text-align:left;
+}
+#algoMenu .algo-item:hover{background:var(--ctl-bg-h);}
+#algoMenu .algo-item span{font-size:var(--fs-sm);color:var(--ink-2);white-space:nowrap;}
+
 /* ---------------- 主舞台 ---------------- */
 #stage{flex:1;display:flex;flex-direction:column;min-height:0;}
 #viewport{

@@ -49,6 +49,19 @@
     _wiresPending: false,
   });
 
+  /* ---- 经典(DX7 式)连接方式模板 ----
+   * ops: 1~6 号算子; mods: [调制者, 被调制者]; carriers: 输出到总线的算子 */
+  G.ALGORITHMS = [
+    { name: "串联堆叠 ×6",   carriers: [1],       mods: [[6, 5], [5, 4], [4, 3], [3, 2], [2, 1]] },
+    { name: "调制池 ×5",     carriers: [1],       mods: [[2, 1], [3, 1], [4, 1], [5, 1], [6, 1]] },
+    { name: "堆叠 ×5 + 载波", carriers: [1, 2],    mods: [[6, 5], [5, 4], [4, 3], [3, 2]] },
+    { name: "双三阶链",       carriers: [1, 4],    mods: [[3, 2], [2, 1], [6, 5]] },
+    { name: "三组对",         carriers: [1, 3, 5], mods: [[2, 1], [4, 3], [6, 5]] },
+    { name: "树状池",         carriers: [1],       mods: [[5, 3], [6, 3], [4, 3], [3, 1], [2, 1]] },
+    { name: "对 + 双载波",    carriers: [1, 3, 5, 6], mods: [[2, 1]] },
+    { name: "全载波",         carriers: [1, 2, 3, 4, 5, 6], mods: [] },
+  ];
+
   let viewport, world, wiresSvg, nodesEl;
 
   /* ================= 工具 ================= */
@@ -669,6 +682,27 @@
   };
   G.fxList = function () {
     return [...G.nodes.values()].filter(n => n.type === "fx");
+  };
+
+  /* ---- 应用连接方式模板: 替换算子间/算子→输出的连线, 保留效果链 ---- */
+  G.applyAlgorithm = function (idx) {
+    const alg = G.ALGORITHMS[idx];
+    if (!alg) return;
+    const ops = G.opsOrdered();
+    G.cables = G.cables.filter(c =>
+      !(c.from.startsWith("op") && (c.to.startsWith("op") || c.to === "fmout")));
+    const opId = n => (ops[n - 1] ? ops[n - 1].id : null);
+    for (const [from, to] of alg.mods) {
+      const f = opId(from), t = opId(to);
+      if (f && t && !G.cables.some(c => c.from === f && c.to === t)) G.cables.push({ from: f, to: t, sel: false });
+    }
+    for (const c of alg.carriers) {
+      const f = opId(c);
+      if (f && !G.cables.some(x => x.from === f && x.to === "fmout")) G.cables.push({ from: f, to: "fmout", sel: false });
+    }
+    G.syncAudio();
+    G.requestWires();
+    G.onChange && G.onChange();
   };
 
   G.removeNode = function (id) {
