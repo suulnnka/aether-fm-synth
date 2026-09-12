@@ -848,10 +848,15 @@
   };
 
   function zoomAt(cx, cy, factor) {
+    // cx/cy 是页面坐标; pan 是相对画布的, 必须先减去画布的页面偏移(顶栏高度等),
+    // 否则缩放锚点会整体偏移
+    const vr = viewport.getBoundingClientRect();
+    const lx = cx - vr.left, ly = cy - vr.top;
     const nz = Math.min(2, Math.max(0.35, G.zoom * factor));
-    const w = toWorld(cx, cy);
-    G.pan.x = cx - w.x * nz;
-    G.pan.y = cy - w.y * nz;
+    const wx = (lx - G.pan.x) / G.zoom;
+    const wy = (ly - G.pan.y) / G.zoom;
+    G.pan.x = lx - wx * nz;
+    G.pan.y = ly - wy * nz;
     G.zoom = nz;
     applyView();
   }
@@ -969,10 +974,12 @@
     if (vPts.size === 2) {
       cancelDrag();
       const [a, b] = [...vPts.values()];
+      const vr = viewport.getBoundingClientRect();
       pinch = {
         d0: Math.max(20, Math.hypot(a.x - b.x, a.y - b.y)),
-        mid0: { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 },
+        mid0: { x: (a.x + b.x) / 2 - vr.left, y: (a.y + b.y) / 2 - vr.top }, // 视口相对坐标
         zoom0: G.zoom, pan0: { ...G.pan },
+        vpLeft: vr.left, vpTop: vr.top,
       };
       viewport.classList.add("panning");
       return;
@@ -986,7 +993,10 @@
     if (pinch && vPts.size >= 2) {
       const [a, b] = [...vPts.values()];
       const d = Math.hypot(a.x - b.x, a.y - b.y);
-      const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+      const mid = {
+        x: (a.x + b.x) / 2 - pinch.vpLeft,
+        y: (a.y + b.y) / 2 - pinch.vpTop,
+      };
       const z = Math.min(2, Math.max(0.35, pinch.zoom0 * d / pinch.d0));
       // 初始中点的世界坐标跟随双指中心移动
       const w = {
