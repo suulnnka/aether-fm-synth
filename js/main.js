@@ -136,6 +136,22 @@ function showHelp() {
     if (!dd.contains(e.target)) dd.classList.remove("open");
   });
 
+  // 经典曲目下拉
+  const songSel = document.getElementById("songSel");
+  for (const s of Aether.songs.list) {
+    const o = document.createElement("option");
+    o.value = s.id; o.textContent = s.name;
+    songSel.appendChild(o);
+  }
+  songSel.addEventListener("change", () => {
+    const s = Aether.songs.list.find(x => x.id === songSel.value);
+    if (!s) return;
+    Aether.seq.loadSong(s);
+    document.querySelector('.dt[data-tab="seq"]').click();
+    Aether.toast("已加载「" + s.name + "」· " + Aether.seq.notes.length + " 个音符, 点播放试听");
+    songSel.value = "";
+  });
+
   // 帮助
   document.getElementById("helpBtn").addEventListener("click", showHelp);
   document.getElementById("modalBack").addEventListener("pointerdown", e => {

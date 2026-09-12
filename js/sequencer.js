@@ -264,6 +264,23 @@
 
   SC.toggle = () => SC.playing ? SC.stop() : SC.play();
 
+  /* 加载曲目: 替换全部音符并应用曲速 */
+  SC.loadSong = function (song) {
+    SC.stop();
+    SC.notes = song.notes().map(n => ({ id: SC.nid++, start: n[0], dur: n[1], midi: n[2], vel: n[3] != null ? n[3] : .9 }));
+    SC.bpm = song.bpm;
+    const bpm = document.getElementById("bpmInput");
+    if (bpm) bpm.value = song.bpm;
+    SC.autoLoop = true;
+    const al = document.getElementById("autoLoop");
+    if (al) al.checked = true;
+    SC._scrolledInit = true;
+    scrollEl.scrollLeft = 0;
+    scrollEl.scrollTop = (SC.PITCH_MAX - 72) * SC.ROW;
+    updateSpacer();
+    SC.dirty = true;
+  };
+
   /* ---------------- 编辑交互 ---------------- */
   let dragN = null;      // {note, mode:'move'|'size'|'new', grabB, grabM}
   let hoverNote = null, hoverEdge = false;
