@@ -15,6 +15,7 @@
     snap: 0.25,
     scaleKey: "major", root: 0,
     loopBars: 8, autoLoop: true,
+    extraBeats: 0,   // 无限长度: 超出音符范围的额外可书写拍数
     metro: false,
     lastDur: 1,
     startCtx: 0, startBeat: 0, scheduledUntil: 0,
@@ -61,11 +62,23 @@
     for (const n of SC.notes) end = Math.max(end, n.start + n.dur);
     return Math.ceil(end / 4) * 4;
   }
+  SC.loopBeats = loopBeats;
 
   function contentBeats() {
     let end = loopBeats() + 16;
     for (const n of SC.notes) end = Math.max(end, n.start + n.dur + 16);
-    return Math.max(end, 64);
+    return Math.max(end + SC.extraBeats, 64);
+  }
+
+  // 接近视口右缘时自动扩展可书写区域(音序长度不限)
+  function extendContentIfNeeded() {
+    const visibleEndBeat = (scrollEl.scrollLeft + scrollEl.clientWidth) / SC.ppb;
+    if (visibleEndBeat > contentBeats() - 8) {
+      SC.extraBeats += 128;   // 每次 +32 小节
+      updateSpacer();
+      return true;
+    }
+    return false;
   }
 
   /* ---------------- 坐标 ---------------- */
@@ -87,6 +100,7 @@
       scrollEl.scrollTop = (SC.PITCH_MAX - 72) * SC.ROW;
       scrollEl.scrollLeft = 0;
     }
+    extendContentIfNeeded();
     const W = canvas.width = canvas.clientWidth * devicePixelRatio;
     const H = canvas.height = canvas.clientHeight * devicePixelRatio;
     ctx2d.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
@@ -430,6 +444,7 @@
       if (rollPts.has(e.pointerId)) rollPts.set(e.pointerId, { x: e.clientX, y: e.clientY });
       if (rollPts.size >= 2 && panPrev) {
         const c = centroid(rollPts);
+        extendContentIfNeeded();
         scrollEl.scrollLeft -= c.x - panPrev.x;
         scrollEl.scrollTop -= c.y - panPrev.y;
         panPrev = c;
@@ -458,6 +473,8 @@
       } else if (e.shiftKey) {
         scrollEl.scrollTop += e.deltaY;
       } else {
+        // 先扩展再滚动: 贴边时滚动事件不会再触发, 必须在这里检查
+        extendContentIfNeeded();
         scrollEl.scrollLeft += (e.deltaY + e.deltaX);
       }
       SC.dirty = true;
