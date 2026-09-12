@@ -88,10 +88,11 @@ function showHelp() {
     });
   });
 
-  // 停靠区高度拖拽
+  // 停靠区高度拖拽(收起时禁用)
   const dock = document.getElementById("dock");
   const grip = document.getElementById("dockGrip");
   grip.addEventListener("pointerdown", e => {
+    if (dock.classList.contains("collapsed")) return;
     e.preventDefault();
     const startY = e.clientY, startH = dock.offsetHeight;
     const mv = ev => {
@@ -101,6 +102,24 @@ function showHelp() {
     const up = () => { window.removeEventListener("pointermove", mv); window.removeEventListener("pointerup", up); };
     window.addEventListener("pointermove", mv);
     window.addEventListener("pointerup", up);
+  });
+
+  // 停靠区收起 / 展开
+  const dockToggle = document.getElementById("dockToggle");
+  dockToggle.addEventListener("click", () => {
+    const h = Math.max(180, dock.offsetHeight);   // 先记录展开高度(收起类会让高度塌到最小值)
+    const collapsed = dock.classList.toggle("collapsed");
+    if (collapsed) {
+      dock.dataset.h = h + "px";
+      dock.style.flexBasis = "";
+      dockToggle.textContent = "▴";
+      dockToggle.title = "展开面板";
+    } else {
+      dock.style.flexBasis = dock.dataset.h || "275px";
+      dockToggle.textContent = "▾";
+      dockToggle.title = "收起面板";
+    }
+    Aether.seq.dirty = true;
   });
 
   // 传输
