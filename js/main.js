@@ -58,7 +58,7 @@ function showHelp() {
   <br>触摸屏: 双指平移卷帘, 双指捏合调整时间缩放, <b>双击音符</b>删除。
   <br>· <b>音阶吸附</b>: 选择音阶与根音后, 音符自动吸附到调内音级 (选"半音阶"则自由)
   <br>· <b>吸附</b>: 时间网格 1/16 ~ 小节; <b>小节</b>: 循环长度, 开"自动长度"则跟随最后音符, 可无限长
-  <br>· 顶栏 <kbd>▶</kbd> 或 <kbd>空格键外的任意时刻</kbd>点播放; BPM 顶栏调整; <b>节拍器</b> 可开关
+  <br>· 顶栏 <kbd>▶</kbd> 播放 / <kbd>■</kbd> 停止; BPM 顶栏调整; <b>节拍器</b> 可开关; 顶栏 <b>曲目</b> 下拉可加载内置经典曲目
   <h4>◈ 音色</h4>
   顶栏预设下拉载入出厂音色; <kbd>💾保存</kbd> 存入浏览器; <kbd>🎲随机</kbd> 开盲盒随机生成音色。
   `;
@@ -81,6 +81,9 @@ function showHelp() {
   // 停靠区 Tab
   document.querySelectorAll("#dockTabs .dt").forEach(btn => {
     btn.addEventListener("click", () => {
+      // 收起状态下点 Tab → 先展开停靠区, 否则切了也看不见面板
+      const dock = document.getElementById("dock");
+      if (dock.classList.contains("collapsed")) document.getElementById("dockToggle").click();
       document.querySelectorAll("#dockTabs .dt").forEach(b => b.classList.toggle("active", b === btn));
       document.getElementById("kbPanel").classList.toggle("hidden", btn.dataset.tab !== "kb");
       document.getElementById("seqPanel").classList.toggle("hidden", btn.dataset.tab !== "seq");
@@ -166,6 +169,8 @@ function showHelp() {
     const s = Aether.songs.list.find(x => x.id === songSel.value);
     if (!s) return;
     Aether.seq.loadSong(s);
+    if (document.getElementById("dock").classList.contains("collapsed"))
+      document.getElementById("dockToggle").click();
     document.querySelector('.dt[data-tab="seq"]').click();
     Aether.toast("已加载「" + s.name + "」· " + Aether.seq.notes.length + " 个音符, 点播放试听");
     songSel.value = "";

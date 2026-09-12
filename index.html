@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Aether FM · FM 合成器工作站</title>
 <link rel="stylesheet" href="css/style.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230b0f16'/%3E%3Crect x='5' y='6' width='22' height='4' rx='2' fill='%23d9a441'/%3E%3Cpath d='M8 15l16 11H8z' fill='%2339d98a'/%3E%3Crect x='5' y='24' width='22' height='3' rx='1.5' fill='%235aa9ff'/%3E%3C/svg%3E">
 </head>
 <body>
 
@@ -77,8 +78,8 @@
     <div id="dockGrip" title="拖动调整高度"></div>
     <div id="dockBar">
       <div id="dockTabs">
-        <button class="dt active" data-tab="kb">🎹 键盘</button>
-        <button class="dt" data-tab="seq">🎼 音序器</button>
+        <button class="dt active" data-tab="kb">键盘</button>
+        <button class="dt" data-tab="seq">音序器</button>
       </div>
       <button id="dockToggle" class="tbtn" title="收起 / 展开面板(给节点区留出空间)">▾</button>
     </div>
@@ -96,7 +97,7 @@
 
     <div id="seqPanel" class="dpanel hidden">
       <div id="seqBar">
-        <label class="tlabel">吸附 <select id="snapSel">
+        <label class="tlabel">网格 <select id="snapSel">
           <option value="4">小节</option>
           <option value="2">1/2</option>
           <option value="1">1/4</option>
@@ -105,9 +106,12 @@
         </select></label>
         <label class="tlabel">音阶 <select id="scaleSel"></select></label>
         <label class="tlabel">根音 <select id="rootSel"></select></label>
+        <span class="vsep"></span>
         <label class="tlabel">小节 <input id="loopBars" type="number" min="1" max="999" value="8"></label>
         <label class="chk"><input type="checkbox" id="autoLoop" checked>自动长度</label>
+        <span class="vsep"></span>
         <label class="tlabel">缩放 <input id="zoomH" type="range" min="8" max="64" value="28"></label>
+        <span class="vsep"></span>
         <label class="chk"><input type="checkbox" id="metroChk">节拍器</label>
         <button id="clearNotes" class="tbtn">清空音符</button>
         <span class="seq-tip">左键拖动画音符/移动 · 右缘拖动改长度 · 右键/双击删除 · 向右滚动不限长度(自动扩展)</span>

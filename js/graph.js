@@ -1130,8 +1130,11 @@
     (function meterLoop() {
       if (G.master && G.master.meterEl) {
         const rms = Aether.audio.rms ? Aether.audio.rms() : 0;
-        const db = 20 * Math.log10(Math.max(rms, 1e-5));
-        const pct = Math.min(100, Math.max(0, (db + 48) / 48 * 100));
+        let pct = 0;
+        if (rms > 0.0015) {   // 静音门限, 避免底噪使电平表常亮
+          const db = 20 * Math.log10(rms);
+          pct = Math.min(100, Math.max(0, (db + 48) / 48 * 100));
+        }
         G.master.meterEl.style.width = pct + "%";
       }
       requestAnimationFrame(meterLoop);

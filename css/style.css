@@ -72,6 +72,8 @@ select,input[type=number]{
   border-radius:var(--ctl-r);font-size:var(--fs-sm);outline:none;
 }
 select:focus,input[type=number]:focus{border-color:var(--ctl-bd-h);}
+select option{background:#141b26;color:#c7d3e3;}
+.vsep{width:1px;height:18px;background:var(--line);margin:0 2px;flex:0 0 auto;}
 #presetSel{width:120px;max-width:120px;}
 input[type=number]{width:62px;}
 /* 隐藏数字输入框原生的上下箭头(Chrome 用 -webkit-, Firefox 用 -moz-) */
