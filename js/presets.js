@@ -156,10 +156,10 @@
 
   const ARCHETYPES = {
     拨弦: { carriers: [1, 2], mods: [1, 3], wave: [0, 0, 1], env: n => ({ a: rnd(0, 8), d: rnd(250, 1400), s: rnd(0, 18), r: rnd(200, 900) }), fxPool: ["delay", "chorus", "reverb", "comp"] },
-    贝斯: { carriers: [1], mods: [1, 2], wave: [3, 2, 0], env: n => ({ a: rnd(0, 5), d: rnd(90, 400), s: rnd(30, 70), r: rnd(80, 300) }), fxPool: ["dist", "filter", "comp", "eq"] },
+    贝斯: { carriers: [1], mods: [1, 2], wave: [3, 2, 0], env: n => ({ a: rnd(0, 5), d: rnd(90, 400), s: rnd(30, 70), r: rnd(80, 300) }), fxPool: ["dist", "filter", "comp", "eq", "overdrive", "hardclip"] },
     铺底: { carriers: [2, 3], mods: [1, 3], wave: [0, 1, 3], env: n => ({ a: rnd(700, 2400), d: rnd(500, 900), s: rnd(70, 96), r: rnd(1400, 3000) }), fxPool: ["chorus", "reverb", "grain", "phaser", "flanger"] },
     钟琴: { carriers: [1, 2], mods: [2, 3], wave: [0, 0, 2], env: n => ({ a: 0, d: rnd(1300, 3400), s: 0, r: rnd(1500, 3400) }), fxPool: ["reverb", "delay", "flanger"] },
-    主音: { carriers: [1], mods: [1, 2], wave: [3, 2, 1], env: n => ({ a: rnd(4, 60), d: rnd(220, 620), s: rnd(58, 85), r: rnd(160, 520) }), fxPool: ["dist", "delay", "filter", "comp", "eq"] },
+    主音: { carriers: [1], mods: [1, 2], wave: [3, 2, 1], env: n => ({ a: rnd(4, 60), d: rnd(220, 620), s: rnd(58, 85), r: rnd(160, 520) }), fxPool: ["dist", "delay", "filter", "comp", "eq", "overdrive", "hardclip"] },
   };
 
   PR.random = function () {

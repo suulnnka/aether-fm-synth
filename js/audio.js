@@ -45,6 +45,16 @@ window.FX_SPECS = {
     { k:"tone",  label:"Tone",  min:500,  max:12000,step:50,   def:6000, fmt:"hz2" },
     { k:"mix",   label:"Mix",   min:0,    max:100,  step:1,    def:60,   fmt:"pct" },
   ]},
+  overdrive: { name:"过载", color:"#ff8c42", params:[
+    { k:"drive", label:"Drive", min:1,    max:20,   step:0.1,  def:4,    fmt:"x"   },
+    { k:"tone",  label:"Tone",  min:500,  max:12000,step:50,   def:5000, fmt:"hz2" },
+    { k:"mix",   label:"Mix",   min:0,    max:100,  step:1,    def:70,   fmt:"pct" },
+  ]},
+  hardclip: { name:"硬削波", color:"#ff2e2e", params:[
+    { k:"drive", label:"Drive", min:1,    max:30,   step:0.1,  def:5,    fmt:"x"   },
+    { k:"tone",  label:"Tone",  min:500,  max:12000,step:50,   def:7000, fmt:"hz2" },
+    { k:"mix",   label:"Mix",   min:0,    max:100,  step:1,    def:80,   fmt:"pct" },
+  ]},
   filter : { name:"滤波", color:"#b18cff", params:[
     { k:"cutoff",label:"Cutoff",min:60,   max:14000,step:10,   def:4000, fmt:"hz2" },
     { k:"reso",  label:"Reso",  min:0.1,  max:18,   step:0.1,  def:2,    fmt:"x"   },
@@ -483,12 +493,20 @@ window.FX_SPECS = {
       };
     }
 
-    if (type === "dist") {
+    /* ---- 失真家族: 软削波(tanh) / 过载(不对称二极管) / 硬削波(clamp) ---- */
+    if (type === "dist" || type === "overdrive" || type === "hardclip") {
       const makeCurve = drive => {
         const n = 1024, c = new Float32Array(n);
         for (let i = 0; i < n; i++) {
           const x = (i / (n - 1)) * 2 - 1;
-          c[i] = Math.tanh(x * drive) / Math.tanh(drive);
+          if (type === "dist") {
+            c[i] = Math.tanh(x * drive) / Math.tanh(drive);            // 对称软削波
+          } else if (type === "overdrive") {
+            const k = Math.max(0.25, drive / 4);                       // 驱动=曲线曲率
+            c[i] = x >= 0 ? 1 - Math.exp(-x * k) : -(1 - Math.exp(x * k));
+          } else {
+            c[i] = Math.max(-1, Math.min(1, x));                       // 砖墙硬削波
+          }
         }
         return c;
       };
@@ -507,7 +525,7 @@ window.FX_SPECS = {
       inst.apply = function () {
         const E = inst.E; if (!E.pre) return;
         const t = ctx.currentTime;
-        E.pre.gain.setTargetAtTime(inst.params.drive, t, 0.02);
+        E.pre.gain.setTargetAtTime(type === "overdrive" ? 1 : inst.params.drive, t, 0.02);
         E.sh.curve = makeCurve(inst.params.drive);
         E.tone.frequency.setTargetAtTime(inst.params.tone, t, 0.02);
       };
