@@ -52,6 +52,16 @@ select,input[type=number]{
 }
 select:focus,input[type=number]:focus{border-color:#35507a;}
 input[type=number]{width:62px;}
+/* 隐藏数字输入框原生的上下箭头(Chrome 用 -webkit-, Firefox 用 -moz-) */
+input[type=number]{
+  -moz-appearance:textfield;
+  appearance:textfield;
+}
+input[type=number]::-webkit-outer-spin-button,
+input[type=number]::-webkit-inner-spin-button{
+  -webkit-appearance:none;
+  margin:0;
+}
 input[type=range]{accent-color:var(--accent);width:90px;}
 #playBtn.on{background:#123324;border-color:#2f8f5f;color:#a5ffc9;}
 
