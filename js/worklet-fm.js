@@ -54,7 +54,10 @@ if (typeof AudioWorkletProcessor === "function") {
               sy: o.sy !== false,                 // 相位同步(默认开)
               fl: o.fl | 0,                       // 输出滤波 0=关 1=低通 2=高通
               fc: o.fc || 8000,                   // 截止频率
-              phase: p.phase, v: p.v, st: p.st, prev: p.prev, lp: p.lp || 0, fa: 0
+              le: !!o.le, lw: o.lw | 0,           // LFO 开关 / 波形
+              lr: o.lr || 4.5, ld: o.ld || 0,     // LFO 速率 / 深度(音分)
+              phase: p.phase, v: p.v, st: p.st, prev: p.prev, lp: p.lp || 0, fa: 0,
+              lfoPh: p.lfoPh || 0, linc: 0, lamp: 0
             };
           });
           this.conns = d.conns.map(c => [c[0] | 0, c[1] | 0]);
@@ -87,6 +90,9 @@ if (typeof AudioWorkletProcessor === "function") {
         o.inc = TAU * f * det / sampleRate;
         // 一阶滤波系数(每个采样点按 1-e^-ωt 逼近)
         o.fa = 1 - Math.exp(-TAU * Math.min(20000, o.fc) / sampleRate);
+        // 每算子 LFO
+        o.linc = TAU * Math.max(0.01, o.lr) / sampleRate;
+        o.lamp = Math.pow(2, Math.min(1200, o.ld) / 1200) - 1; // 音分→频率倍率增量
       }
       this.incs = this.ops.map(o => o.inc);
     }
@@ -99,6 +105,7 @@ if (typeof AudioWorkletProcessor === "function") {
         for (const o of this.ops) {
           o.st = ATT; o.v = 0; o.prev = 0;
           if (o.sy) o.phase = 0;       // 相位同步: 触发时归零
+          o.lfoPh = 0;                 // LFO 同步归零
         }
       } else {
         this.gate = false;
@@ -147,7 +154,19 @@ if (typeof AudioWorkletProcessor === "function") {
           }
 
           // --- 相位 & 调制 ---
-          o.phase += this.incs[i];
+          let inc = this.incs[i];
+          if (o.le && o.lamp > 0) {
+            // 每算子 LFO → 频率(颤音), 波形取归一化 [-1,1]
+            o.lfoPh += o.linc;
+            if (o.lfoPh > 1e6) o.lfoPh %= TAU * 1000;
+            let lv;
+            if (o.lw === 0) lv = Math.sin(o.lfoPh);
+            else if (o.lw === 1) lv = Math.asin(Math.sin(o.lfoPh)) * (2 / Math.PI);
+            else if (o.lw === 2) lv = Math.sin(o.lfoPh) >= 0 ? 1 : -1;
+            else { const x = o.lfoPh / TAU; lv = 2 * (x - Math.floor(x + 0.5)); }
+            inc *= 1 + o.lamp * lv;
+          }
+          o.phase += inc;
           if (o.phase > 1e6) o.phase %= TAU * 1000;
 
           let m = 0;

@@ -37,6 +37,7 @@
     { k: "s",       label: "S",      min: 0,    max: 99,   step: 1,    def: 70,   fmt: "int"  },
     { k: "r",       label: "R",      min: 10,   max: 8000, step: 10,   def: 600,  fmt: "ms"   },
   ];
+  const specOf = k => OP_PARAMS.find(s => s.k === k);
 
   const G = (Aether.Graph = {
     nodes: new Map(),
@@ -160,8 +161,8 @@
   };
 
   /* ================= 节点 ================= */
-  function makeSliderRow(node, spec) {
-    const row = el("div", "prow", node.bodyEl);
+  function makeSliderRow(node, spec, parent) {
+    const row = el("div", "prow", parent || node.bodyEl);
     row.dataset.k = spec.k;
     el("span", "pl", row).textContent = spec.label;
     const track = el("div", "pt", row);
@@ -229,8 +230,8 @@
     return row;
   }
 
-  function makeSegRow(node, options, key) {
-    const row = el("div", "wave-row", node.bodyEl);
+  function makeSegRow(node, options, key, parent) {
+    const row = el("div", "wave-row", parent || node.bodyEl);
     options.forEach((n, i) => {
       const b = el("button", "", row);
       b.textContent = n;
@@ -253,6 +254,178 @@
     p.title = dir === "out" ? "输出 (拖出连线)" : "输入";
     return p;
   }
+
+  /* ---- ADSR 可视化图形(经典 DAW 拖拽手柄) ---- */
+  function makeAdsrPanel(node) {
+    const wrap = el("div", "adsr-wrap", null);
+    const cv = document.createElement("canvas");
+    cv.className = "adsr-cv";
+    const W = 210, H = 66, DPR = Math.min(2, devicePixelRatio || 1);
+    cv.width = W * DPR; cv.height = H * DPR;
+    cv.style.width = W + "px"; cv.style.height = H + "px";
+    wrap.appendChild(cv);
+    const g = cv.getContext("2d");
+    const PAD = 5, TOP = 9, BOT = 50;
+    const aW = 52, dW = 52, sW = 38, rW = W - PAD * 2 - aW - dW - sW;
+    const x0 = PAD, xA = x0 + aW, xD = xA + dW, xS = xD + sW, xR = W - PAD;
+    const specOf = k => OP_PARAMS.find(s => s.k === k);
+    const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+    const sYv = () => BOT - (node.p.s / 99) * (BOT - TOP);
+
+    function draw() {
+      g.setTransform(DPR, 0, 0, DPR, 0, 0);
+      g.clearRect(0, 0, W, H);
+      // 分段底色/分隔线/标签
+      g.fillStyle = "#3d4c62";
+      g.font = "8px Consolas";
+      const segs = [["A", x0, xA], ["D", xA, xD], ["S", xD, xS], ["R", xS, xR]];
+      for (const [nm, b1, b2] of segs) {
+        g.fillText(nm, (b1 + b2) / 2 - 3, H - 1);
+        g.fillStyle = "rgba(140,170,220,0.10)";
+        g.fillRect(b2, 4, 1, H - 14);
+        g.fillStyle = "#3d4c62";
+      }
+      g.fillRect(PAD, BOT, W - PAD * 2, 1);
+
+      const sy = sYv();
+      const pts = [[x0, BOT], [xA, TOP], [xD, sy], [xS, sy], [xR, BOT]];
+      g.beginPath();
+      g.moveTo(pts[0][0], pts[0][1]);
+      for (let i = 1; i < pts.length; i++) g.lineTo(pts[i][0], pts[i][1]);
+      g.closePath();
+      g.fillStyle = node.color + "2e";
+      g.fill();
+      g.strokeStyle = node.color;
+      g.lineWidth = 1.6;
+      g.stroke();
+
+      // 手柄
+      for (const [hx, hy] of [[xA, TOP], [xD, sy], [xS, sy]]) {
+        g.beginPath();
+        g.arc(hx, hy, 4.5, 0, Math.PI * 2);
+        g.fillStyle = "#0c1119"; g.fill();
+        g.strokeStyle = "#7df0c4"; g.lineWidth = 1.6;
+        g.shadowColor = "#7df0c4"; g.shadowBlur = 6;
+        g.stroke();
+        g.shadowBlur = 0;
+      }
+    }
+
+    // 手柄拖拽
+    cv.addEventListener("pointerdown", e => {
+      e.stopPropagation(); e.preventDefault();
+      const rect = cv.getBoundingClientRect();
+      const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+      const sy = sYv();
+      const handles = [
+        { k: "a", x: xA, y: TOP },
+        { k: "d", x: xD, y: sy, also: "s" },
+        { k: "r", x: xS, y: sy },
+      ];
+      let pick = null, best = 14;
+      for (const h of handles) {
+        const d = Math.hypot(mx - h.x, my - h.y);
+        if (d < best) { best = d; pick = h; }
+      }
+      if (!pick) return;
+      const apply = (cx, cy) => {
+        if (pick.k === "a") {
+          node.p.a = clamp(Math.round(((cx - x0) / aW) * 4000 / 5) * 5, 0, 4000);
+          G.paramChanged(node, "a");
+        } else if (pick.k === "d") {
+          node.p.d = clamp(Math.round(((cx - xA) / dW) * 4000 / 5) * 5, 5, 4000);
+          node.p.s = clamp(Math.round(((BOT - cy) / (BOT - TOP)) * 99), 0, 99);
+          G.paramChanged(node, "d"); G.paramChanged(node, "s");
+        } else {
+          node.p.r = clamp(Math.round((10 + ((xR - cx) / rW) * 7990) / 10) * 10, 10, 8000);
+          G.paramChanged(node, "r");
+        }
+        draw();
+        if (node._refreshAdv) node._refreshAdv();
+      };
+      apply(e.clientX - rect.left, e.clientY - rect.top);
+      const mv = ev => apply(ev.clientX - rect.left, ev.clientY - rect.top);
+      const up = () => { window.removeEventListener("pointermove", mv); window.removeEventListener("pointerup", up); };
+      window.addEventListener("pointermove", mv);
+      window.addEventListener("pointerup", up);
+    });
+
+    draw();
+    return { el: wrap, draw };
+  }
+
+  /* ---- 旋钮 ---- */
+  function makeKnob(node, spec) {
+    const S = 34, DPR = Math.min(2, devicePixelRatio || 1);
+    const wrap = el("div", "knob");
+    wrap.title = spec.label;
+    const cv = document.createElement("canvas");
+    cv.width = S * DPR; cv.height = S * DPR;
+    cv.style.width = S + "px"; cv.style.height = S + "px";
+    wrap.appendChild(cv);
+    const lb = el("div", "knob-lb", wrap);
+    lb.textContent = spec.label;
+    const g = cv.getContext("2d");
+    const isLog = !!spec.log && spec.min > 0;
+    const toFrac = v => isLog
+      ? Math.log(v / spec.min) / Math.log(spec.max / spec.min)
+      : (v - spec.min) / (spec.max - spec.min);
+    const fromFrac = fr => isLog
+      ? spec.min * Math.pow(spec.max / spec.min, fr)
+      : spec.min + fr * (spec.max - spec.min);
+    const A0 = Math.PI * 0.75, A1 = Math.PI * 2.25;
+
+    function draw() {
+      const fr = clamp(toFrac(node.p[spec.k]), 0, 1);
+      g.setTransform(DPR, 0, 0, DPR, 0, 0);
+      g.clearRect(0, 0, S, S);
+      const cx = S / 2, cy = S / 2, r = 11.5;
+      g.strokeStyle = "#233046"; g.lineWidth = 3.5;
+      g.beginPath(); g.arc(cx, cy, r, A0, A1); g.stroke();
+      g.strokeStyle = "#7df0c4"; g.shadowColor = "#7df0c4"; g.shadowBlur = 4;
+      g.beginPath(); g.arc(cx, cy, r, A0, A0 + (A1 - A0) * fr); g.stroke();
+      g.shadowBlur = 0;
+      const ang = A0 + (A1 - A0) * fr;
+      g.strokeStyle = "#eaf6ff"; g.lineWidth = 2;
+      g.beginPath();
+      g.moveTo(cx + Math.cos(ang) * 3, cy + Math.sin(ang) * 3);
+      g.lineTo(cx + Math.cos(ang) * (r - 3), cy + Math.sin(ang) * (r - 3));
+      g.stroke();
+    }
+
+    cv.addEventListener("pointerdown", e => {
+      e.stopPropagation(); e.preventDefault();
+      const y0 = e.clientY;
+      const fr0 = clamp(toFrac(node.p[spec.k]), 0, 1);
+      const mv = ev => {
+        const fr = clamp(fr0 + (y0 - ev.clientY) / 130, 0, 1);
+        let v = fromFrac(fr);
+        v = Math.round(v / spec.step) * spec.step;
+        v = +clamp(v, spec.min, spec.max).toFixed(4);
+        if (v !== node.p[spec.k]) {
+          node.p[spec.k] = v;
+          draw();
+          if (node._refreshAdv) node._refreshAdv();
+          G.paramChanged(node, spec.k);
+        }
+      };
+      const up = () => { window.removeEventListener("pointermove", mv); window.removeEventListener("pointerup", up); };
+      window.addEventListener("pointermove", mv);
+      window.addEventListener("pointerup", up);
+    });
+    cv.addEventListener("dblclick", e => {
+      e.stopPropagation();
+      node.p[spec.k] = spec.def;
+      draw();
+      if (node._refreshAdv) node._refreshAdv();
+      G.paramChanged(node, spec.k);
+    });
+
+    draw();
+    return { el: wrap, draw };
+  }
+
+  const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 
   function baseNode(id, type, x, y, color, title) {
     const node = {
@@ -327,6 +500,10 @@
     node.p.freqMode = opts.p && opts.p.freqMode !== undefined ? opts.p.freqMode : 0;
     node.p.sync = opts.p && opts.p.sync !== undefined ? !!opts.p.sync : true;
     node.p.filter = opts.p && opts.p.filter !== undefined ? (opts.p.filter | 0) : 0;
+    node.p.lfoOn = opts.p && opts.p.lfoOn !== undefined ? !!opts.p.lfoOn : false;
+    node.p.lwave = opts.p && opts.p.lwave !== undefined ? (opts.p.lwave | 0) : 0;
+    node.p.lrate = opts.p && opts.p.lrate !== undefined ? opts.p.lrate : 4.5;
+    node.p.ldepth = opts.p && opts.p.ldepth !== undefined ? opts.p.ldepth : 25;
     node.p.enabled = opts.p && opts.p.enabled !== undefined ? opts.p.enabled : true;
 
     const xBtn = el("button", "n-hbtn n-x", node.headEl);
@@ -334,7 +511,8 @@
     xBtn.addEventListener("pointerdown", e => e.stopPropagation());
     xBtn.addEventListener("click", e => { e.stopPropagation(); G.removeNode(id); });
 
-    // 开关行: Fixed(固定频率) / Sync(相位同步) / 输出滤波循环按钮
+    // 波形选择在最上, 其次开关行(Fixed/Sync/FLT, 折叠态可见)
+    makeWaveRow(node);
     const trow = el("div", "toggle-row", node.bodyEl);
     const mkCheck = (label, title) => {
       const lb = el("label", "tcb", trow);
@@ -348,7 +526,7 @@
     const cbFixed = mkCheck("Fixed", "固定频率模式(不勾选=按比率跟随音高)");
     const cbSync = mkCheck("Sync", "相位同步: 音符触发时相位归零");
     const flBtn = el("button", "flt-btn", trow);
-    flBtn.title = "输出滤波: 不启用 → 低通 → 高通 循环切换";
+    flBtn.title = "输出滤波: 不启用 → 低通 → 高通 循环切换(配置在高级面板)";
     flBtn.addEventListener("pointerdown", e => e.stopPropagation());
     flBtn.addEventListener("click", e => {
       e.stopPropagation();
@@ -366,9 +544,60 @@
       G.paramChanged(node, "sync");
     });
 
+    // 主要滑条(折叠态)
     const rowEls = {};
-    makeWaveRow(node);
-    for (const s of OP_PARAMS) rowEls[s.k] = makeSliderRow(node, s);
+    for (const s of OP_PARAMS) {
+      if (["ratio", "fixedHz", "detune", "level", "fb"].includes(s.k))
+        rowEls[s.k] = makeSliderRow(node, s);
+    }
+
+    // 底部展开按钮
+    const expBar = el("button", "exp-bar", node.bodyEl);
+    expBar.textContent = "▾ 高级";
+    expBar.addEventListener("pointerdown", e => e.stopPropagation());
+    expBar.addEventListener("click", e => {
+      e.stopPropagation();
+      node.expanded = !node.expanded;
+      adv.style.display = node.expanded ? "" : "none";
+      expBar.textContent = node.expanded ? "▴ 收起" : "▾ 高级";
+      G.requestWires();
+    });
+
+    // 高级面板(展开显示)
+    const adv = el("div", "adv-panel", node.bodyEl);
+    adv.style.display = "none";
+
+    // ADSR 可视化 + 旋钮
+    const adsr = makeAdsrPanel(node);
+    adv.appendChild(adsr.el);
+    const knobRow = el("div", "knob-row", adv);
+    const knobs = ["a", "d", "s", "r"].map(k => makeKnob(node, specOf(k)));
+    knobs.forEach(kn => knobRow.appendChild(kn.el));
+
+    // 滤波配置(FLT 启用时显示)
+    rowEls.fcut = makeSliderRow(node, specOf("fcut"), adv);
+
+    // LFO 区块(可展开收回)
+    const lfoHead = el("div", "toggle-row", adv);
+    const lbLfo = el("label", "tcb", lfoHead);
+    lbLfo.title = "每算子 LFO → 调制该算子音高(颤音)";
+    const cbLfo = el("input", "", lbLfo);
+    cbLfo.type = "checkbox";
+    cbLfo.checked = !!node.p.lfoOn;
+    lbLfo.appendChild(document.createTextNode("LFO"));
+    cbLfo.addEventListener("pointerdown", e => e.stopPropagation());
+    cbLfo.addEventListener("change", () => {
+      node.p.lfoOn = cbLfo.checked;
+      lfoCfg.style.display = node.p.lfoOn ? "" : "none";
+      G.paramChanged(node, "lfoOn");
+    });
+    const lfoCfg = el("div", "lfo-cfg", adv);
+    lfoCfg.style.display = node.p.lfoOn ? "" : "none";
+    makeSegRow(node, ["Sin", "Tri", "Sqr", "Saw"], "lwave", lfoCfg);
+    makeSliderRow(node, { k: "lrate", label: "Rate", min: 0.1, max: 20, step: 0.1, def: 4.5, fmt: "hz" }, lfoCfg);
+    makeSliderRow(node, { k: "ldepth", label: "Depth", min: 0, max: 100, step: 1, def: 25, fmt: "int" }, lfoCfg);
+
+    node._refreshAdv = () => { adsr.draw(); knobs.forEach(k => k.draw()); };
     addPort(node, "in");
     addPort(node, "out");
 
@@ -380,7 +609,6 @@
       flBtn.classList.toggle("on", fl > 0);
       rowEls.ratio.style.display = node.p.freqMode ? "none" : "";
       rowEls.fixedHz.style.display = node.p.freqMode ? "" : "none";
-      rowEls.fcut.style.display = fl ? "" : "none";
     }
     node.syncMode = refreshRows;
     refreshRows();
@@ -549,6 +777,7 @@
         fb: n.p.fb, a: n.p.a / 1000, d: n.p.d / 1000, s: n.p.s / 99, r: n.p.r / 1000,
         fm: n.p.freqMode === 1, fhz: n.p.fixedHz, en: n.p.enabled !== false,
         sy: n.p.sync !== false, fl: n.p.filter | 0, fc: n.p.fcut || 8000,
+        le: !!n.p.lfoOn, lw: n.p.lwave | 0, lr: n.p.lrate, ld: n.p.ldepth,
       })),
       conns, carriers,
     };
