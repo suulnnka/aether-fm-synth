@@ -15,6 +15,17 @@ window.FX_SPECS = {
     { k:"voices",label:"Voices",min:1,    max:6,    step:1,    def:3,    fmt:"int" },
     { k:"base",  label:"Base",  min:5,    max:40,   step:0.5,  def:18,   fmt:"ms1" },
   ]},
+  flanger: { name:"镶边", color:"#4fd1ff", params:[
+    { k:"rate",  label:"Rate",  min:0.05, max:5,    step:0.01, def:0.3,  fmt:"hz"  },
+    { k:"depth", label:"Depth", min:0,    max:10,   step:0.1,  def:2.5,  fmt:"ms1" },
+    { k:"fb",    label:"FB",    min:0,    max:90,   step:1,    def:40,   fmt:"pct" },
+    { k:"mix",   label:"Mix",   min:0,    max:100,  step:1,    def:50,   fmt:"pct" },
+  ]},
+  phaser : { name:"移相", color:"#9dff5a", params:[
+    { k:"rate",  label:"Rate",  min:0.05, max:8,    step:0.01, def:0.6,  fmt:"hz"  },
+    { k:"depth", label:"Depth", min:0,    max:100,  step:1,    def:60,   fmt:"pct" },
+    { k:"mix",   label:"Mix",   min:0,    max:100,  step:1,    def:50,   fmt:"pct" },
+  ]},
   tremolo: { name:"震音", color:"#2fbfd4", params:[
     { k:"rate",  label:"Rate",  min:0.1,  max:16,   step:0.1,  def:4.8,  fmt:"hz"  },
     { k:"depth", label:"Depth", min:0,    max:100,  step:1,    def:50,   fmt:"pct" },
@@ -39,6 +50,27 @@ window.FX_SPECS = {
     { k:"reso",  label:"Reso",  min:0.1,  max:18,   step:0.1,  def:2,    fmt:"x"   },
     { k:"mix",   label:"Mix",   min:0,    max:100,  step:1,    def:100,  fmt:"pct" },
   ], types:["低通","高通","带通"] },
+  eq     : { name:"均衡", color:"#ffd166", params:[
+    { k:"low",   label:"Low",   min:-15,  max:15,   step:0.5,  def:0,    fmt:"db"  },
+    { k:"mid",   label:"Mid",   min:-15,  max:15,   step:0.5,  def:0,    fmt:"db"  },
+    { k:"high",  label:"High",  min:-15,  max:15,   step:0.5,  def:0,    fmt:"db"  },
+    { k:"midF",  label:"Freq",  min:250,  max:4000, step:10,   def:1000, fmt:"hz2" },
+  ]},
+  comp   : { name:"压缩", color:"#e6ff5c", params:[
+    { k:"thr",   label:"Thr",   min:-50,  max:0,    step:1,    def:-20,  fmt:"db"  },
+    { k:"ratio", label:"Ratio", min:1,    max:20,   step:0.1,  def:4,    fmt:"x"   },
+    { k:"atk",   label:"Atk",   min:1,    max:100,  step:1,    def:10,   fmt:"ms"  },
+    { k:"rel",   label:"Rel",   min:10,   max:500,  step:5,    def:120,  fmt:"ms"  },
+    { k:"gain",  label:"Gain",  min:0,    max:24,   step:1,    def:6,    fmt:"db"  },
+  ]},
+  quant  : { name:"量化", color:"#63f2ff", params:[
+    { k:"bits",  label:"Bits",  min:2,    max:16,   step:1,    def:8,    fmt:"int" },
+    { k:"mix",   label:"Mix",   min:0,    max:100,  step:1,    def:100,  fmt:"pct" },
+  ]},
+  decim  : { name:"降采样", color:"#c77dff", params:[
+    { k:"rate",  label:"Rate",  min:500,  max:20000,step:50,   def:8000, fmt:"hz2", log:true },
+    { k:"mix",   label:"Mix",   min:0,    max:100,  step:1,    def:100,  fmt:"pct" },
+  ]},
   grain  : { name:"粒子", color:"#ff6b9d", params:[
     { k:"size",   label:"Size",   min:10,  max:400, step:1,   def:60, fmt:"ms"  },
     { k:"density",label:"Density",min:0.5, max:40,  step:0.5, def:15, fmt:"x1"  },
@@ -73,6 +105,7 @@ window.FX_SPECS = {
     await Promise.all([
       ctx.audioWorklet.addModule("js/worklet-fm.js"),
       ctx.audioWorklet.addModule("js/worklet-grain.js"),
+      ctx.audioWorklet.addModule("js/worklet-fx.js"),
     ]);
 
     A.fmBus = ctx.createGain();
@@ -516,6 +549,136 @@ window.FX_SPECS = {
           mix: inst.params.mix / 100, grains: inst.params.grains,
           pitch: inst.params.pitch, spread: inst.params.spread / 100,
         }});
+      };
+    }
+
+    if (type === "quant" || type === "decim") {
+      inst.build = function () {
+        const gn = new AudioWorkletNode(ctx, "aether-crush", { numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [1] });
+        input.connect(gn); gn.connect(wet);
+        inst.E = { gn };
+      };
+      inst.unbuild = function () {
+        try { inst.E.gn && inst.E.gn.disconnect(); } catch (e) {}
+        inst.E = {};
+      };
+      inst.apply = function () {
+        const E = inst.E; if (!E.gn) return;
+        E.gn.port.postMessage({ type: "p", p: type === "quant"
+          ? { bits: inst.params.bits, rateHz: ctx.sampleRate }        // 只量化
+          : { bits: 24, rateHz: inst.params.rate }                    // 只降采样
+        });
+      };
+    }
+
+    if (type === "flanger") {
+      inst.build = function () {
+        inst.unbuild && inst.unbuild();
+        const dl = ctx.createDelay(0.02);
+        dl.delayTime.value = 0.0015;
+        const fb = ctx.createGain(); fb.gain.value = (inst.params.fb ?? 40) / 100;
+        const lfo = ctx.createOscillator(); lfo.type = "sine";
+        lfo.frequency.value = inst.params.rate ?? 0.3;
+        const lg = ctx.createGain(); lg.gain.value = (inst.params.depth ?? 2.5) / 1000;
+        lfo.connect(lg); lg.connect(dl.delayTime);
+        input.connect(dl); dl.connect(fb); fb.connect(dl); dl.connect(wet);
+        lfo.start();
+        inst.E = { dl, fb, lfo, lg };
+      };
+      inst.unbuild = function () {
+        const E = inst.E;
+        if (E.lfo) { try { E.lfo.stop(); } catch (e) {} }
+        [E.dl, E.fb, E.lg].forEach(n => n && n.disconnect && n.disconnect());
+        inst.E = {};
+      };
+      inst.apply = function () {
+        const E = inst.E; if (!E.dl) return;
+        const t = ctx.currentTime;
+        E.lfo.frequency.setTargetAtTime(inst.params.rate, t, 0.02);
+        E.lg.gain.setTargetAtTime(inst.params.depth / 1000, t, 0.02);
+        E.fb.gain.setTargetAtTime(inst.params.fb / 100, t, 0.02);
+      };
+    }
+
+    if (type === "phaser") {
+      inst.build = function () {
+        inst.unbuild && inst.unbuild();
+        const bases = [300, 800, 1600, 3200];
+        const aps = bases.map(f => {
+          const ap = ctx.createBiquadFilter();
+          ap.type = "allpass"; ap.frequency.value = f; ap.Q.value = 0.7;
+          return ap;
+        });
+        let prev = input;
+        for (const ap of aps) { prev.connect(ap); prev = ap; }
+        prev.connect(wet);
+        const lfo = ctx.createOscillator(); lfo.type = "sine";
+        lfo.frequency.value = inst.params.rate ?? 0.6;
+        const lg = ctx.createGain(); lg.gain.value = (inst.params.depth ?? 60) * 12;
+        lfo.connect(lg);
+        for (const ap of aps) lg.connect(ap.frequency);
+        lfo.start();
+        inst.E = { aps, lfo, lg };
+      };
+      inst.unbuild = function () {
+        const E = inst.E;
+        E.aps && E.aps.forEach(a => a.disconnect());
+        if (E.lfo) { try { E.lfo.stop(); } catch (e) {} }
+        E.lg && E.lg.disconnect();
+        inst.E = {};
+      };
+      inst.apply = function () {
+        const E = inst.E; if (!E.lfo) return;
+        const t = ctx.currentTime;
+        E.lfo.frequency.setTargetAtTime(inst.params.rate, t, 0.02);
+        E.lg.gain.setTargetAtTime(inst.params.depth * 12, t, 0.02);
+      };
+    }
+
+    if (type === "eq") {
+      inst.build = function () {
+        const low = ctx.createBiquadFilter(); low.type = "lowshelf"; low.frequency.value = 200;
+        const mid = ctx.createBiquadFilter(); mid.type = "peaking"; mid.frequency.value = inst.params.midF ?? 1000; mid.Q.value = 0.9;
+        const high = ctx.createBiquadFilter(); high.type = "highshelf"; high.frequency.value = 4000;
+        input.connect(low); low.connect(mid); mid.connect(high); high.connect(wet);
+        inst.E = { low, mid, high };
+      };
+      inst.unbuild = function () {
+        const E = inst.E;
+        [E.low, E.mid, E.high].forEach(n => n && n.disconnect && n.disconnect());
+        inst.E = {};
+      };
+      inst.apply = function () {
+        const E = inst.E; if (!E.low) return;
+        const t = ctx.currentTime;
+        E.low.gain.setTargetAtTime(inst.params.low, t, 0.02);
+        E.mid.gain.setTargetAtTime(inst.params.mid, t, 0.02);
+        E.mid.frequency.setTargetAtTime(inst.params.midF, t, 0.02);
+        E.high.gain.setTargetAtTime(inst.params.high, t, 0.02);
+      };
+    }
+
+    if (type === "comp") {
+      inst.build = function () {
+        const cp = ctx.createDynamicsCompressor();
+        cp.knee.value = 12;
+        const makeup = ctx.createGain(); makeup.gain.value = 1;
+        input.connect(cp); cp.connect(makeup); makeup.connect(wet);
+        inst.E = { cp, makeup };
+      };
+      inst.unbuild = function () {
+        const E = inst.E;
+        [E.cp, E.makeup].forEach(n => n && n.disconnect && n.disconnect());
+        inst.E = {};
+      };
+      inst.apply = function () {
+        const E = inst.E; if (!E.cp) return;
+        const t = ctx.currentTime, P = inst.params;
+        E.cp.threshold.setTargetAtTime(P.thr, t, 0.02);
+        E.cp.ratio.setTargetAtTime(P.ratio, t, 0.02);
+        E.cp.attack.setTargetAtTime(P.atk / 1000, t, 0.02);
+        E.cp.release.setTargetAtTime(P.rel / 1000, t, 0.02);
+        E.makeup.gain.setTargetAtTime(Math.pow(10, P.gain / 20), t, 0.02);
       };
     }
 

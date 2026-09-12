@@ -10,6 +10,7 @@
   const FMT = {
     int  : v => String(Math.round(v)),
     pct  : v => Math.round(v) + "%",
+    db   : v => (v > 0 ? "+" : "") + Math.round(v) + "dB",
     ms   : v => v < 1000 ? Math.round(v) + "ms" : (v / 1000).toFixed(2) + "s",
     ms1  : v => v < 10 ? v.toFixed(1) + "ms" : Math.round(v) + "ms",
     hz   : v => Math.round(v) + "Hz",
