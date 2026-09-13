@@ -298,8 +298,8 @@ function showHelp() {
     item.addEventListener("click", async () => {
       algoDd.classList.remove("open");
       if (!(await Aether.audio.ensure())) return;
-      Aether.Graph.applyAlgorithm(idx);
-      Aether.toast("已应用连接方式:" + alg.name);
+      const warns = Aether.Graph.applyAlgorithm(idx) || [];
+      Aether.toast("已应用连接方式:" + alg.name + (warns.length ? " · 注意: " + warns.join(",") : ""));
     });
     algoMenu.appendChild(item);
     drawAlgoCv(cv, alg);

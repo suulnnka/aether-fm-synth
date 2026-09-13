@@ -58,7 +58,7 @@
     { name: "双三阶链",       carriers: [1, 4],    mods: [[3, 2], [2, 1], [6, 5]] },
     { name: "三组对",         carriers: [1, 3, 5], mods: [[2, 1], [4, 3], [6, 5]] },
     { name: "树状池",         carriers: [1],       mods: [[5, 3], [6, 3], [4, 3], [3, 1], [2, 1]] },
-    { name: "对 + 双载波",    carriers: [1, 3, 5, 6], mods: [[2, 1]] },
+    { name: "对 + 双载波",    carriers: [1, 3, 5, 6], mods: [[2, 1], [4, 3]] },
     { name: "全载波",         carriers: [1, 2, 3, 4, 5, 6], mods: [] },
   ];
 
@@ -745,6 +745,14 @@
     G.syncAudio();
     G.requestWires();
     G.onChange && G.onChange();
+    // 校验: 每个算子都应有角色(载波或调制器), 且不应有已关闭的算子
+    const warns = [];
+    for (const n of ops) {
+      const used = G.cables.some(c => c.from === n.id || c.to === n.id);
+      if (n.p.enabled === false) warns.push(n.title + " 已关闭");
+      else if (!used) warns.push(n.title + " 未连接");
+    }
+    return warns;
   };
 
   G.removeNode = function (id) {
