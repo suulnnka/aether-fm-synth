@@ -174,17 +174,19 @@ input[type=range]{accent-color:var(--accent);width:90px;}
 
 .n-body{padding:2px 10px 10px;}
 
-/* 波形选择 */
+/* 波形/分段选择(边框与选中底色跟随节点主题色) */
 .wave-row{display:flex;gap:3px;margin:2px 0 7px;}
 .wave-row button{
-  flex:1;background:#151d2b;border:1px solid #26334c;color:#8296b4;
+  flex:1;background:#141b26;border:1px solid #26334c;color:#8296b4;
   font-size:10.5px;padding:3.5px 0;border-radius:6px;cursor:pointer;letter-spacing:.8px;
   transition:all .12s;
 }
 .wave-row button:hover{border-color:#3b5079;color:#cfe3ff;}
 .wave-row button.on{
-  background:linear-gradient(180deg,#2f4f8f,#243a6b);color:#eaf3ff;border-color:#4a6db5;
-  box-shadow:0 0 10px rgba(90,140,255,.35);
+  border-color:var(--ac);
+  background:color-mix(in srgb, var(--ac) 14%, #10151f);
+  color:#eaf3ff;
+  box-shadow:0 0 8px color-mix(in srgb, var(--ac) 30%, transparent);
 }
 
 /* 分区标签 */
