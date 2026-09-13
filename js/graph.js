@@ -312,13 +312,13 @@
       g.lineWidth = 1.6;
       g.stroke();
 
-      // 手柄
+      // 手柄(颜色跟随节点)
       for (const [hx, hy] of [[xA, TOP], [xD, sy], [xS, sy]]) {
         g.beginPath();
-        g.arc(hx, hy, 4.5, 0, Math.PI * 2);
+        g.arc(hx, hy, 5, 0, Math.PI * 2);
         g.fillStyle = "#0c1119"; g.fill();
-        g.strokeStyle = "#7df0c4"; g.lineWidth = 1.6;
-        g.shadowColor = "#7df0c4"; g.shadowBlur = 6;
+        g.strokeStyle = node.color; g.lineWidth = 2;
+        g.shadowColor = node.color; g.shadowBlur = 7;
         g.stroke();
         g.shadowBlur = 0;
       }
@@ -330,17 +330,11 @@
       const rect = cv.getBoundingClientRect();
       const mx = e.clientX - rect.left, my = e.clientY - rect.top;
       const sy = sYv();
-      const handles = [
-        { k: "a", x: xA, y: TOP },
-        { k: "d", x: xD, y: sy, also: "s" },
-        { k: "r", x: xS, y: sy },
-      ];
-      let pick = null, best = 14;
-      for (const h of handles) {
-        const d = Math.hypot(mx - h.x, my - h.y);
-        if (d < best) { best = d; pick = h; }
-      }
-      if (!pick) return;
+      // 按横向区域拾取: A 段抓攻击手柄, D/S 段抓衰减手柄, R 段抓释放手柄
+      let pick;
+      if (mx < xA) pick = { k: "a", x: xA, y: TOP };
+      else if (mx < xD + (xS - xD) * 0.5) pick = { k: "d", x: xD, y: sy, also: "s" };
+      else pick = { k: "r", x: xS, y: sy };
       const apply = (cx, cy) => {
         if (pick.k === "a") {
           node.p.a = clamp(Math.round(((cx - x0) / aW) * 4000 / 5) * 5, 0, 4000);
@@ -388,6 +382,7 @@
       : spec.min + fr * (spec.max - spec.min);
     const A0 = Math.PI * 0.75, A1 = Math.PI * 2.25;
 
+    const col = node.color || "#7df0c4";
     function draw() {
       const fr = clamp(toFrac(node.p[spec.k]), 0, 1);
       g.setTransform(DPR, 0, 0, DPR, 0, 0);
@@ -395,7 +390,7 @@
       const cx = S / 2, cy = S / 2, r = 11.5;
       g.strokeStyle = "#233046"; g.lineWidth = 3.5;
       g.beginPath(); g.arc(cx, cy, r, A0, A1); g.stroke();
-      g.strokeStyle = "#7df0c4"; g.shadowColor = "#7df0c4"; g.shadowBlur = 4;
+      g.strokeStyle = col; g.shadowColor = col; g.shadowBlur = 4;
       g.beginPath(); g.arc(cx, cy, r, A0, A0 + (A1 - A0) * fr); g.stroke();
       g.shadowBlur = 0;
       const ang = A0 + (A1 - A0) * fr;
@@ -411,7 +406,7 @@
       const y0 = e.clientY;
       const fr0 = clamp(toFrac(node.p[spec.k]), 0, 1);
       const mv = ev => {
-        const fr = clamp(fr0 + (y0 - ev.clientY) / 130, 0, 1);
+        const fr = clamp(fr0 + (y0 - ev.clientY) / 70, 0, 1);   // 70px 走满量程
         let v = fromFrac(fr);
         v = Math.round(v / spec.step) * spec.step;
         v = +clamp(v, spec.min, spec.max).toFixed(4);
@@ -426,6 +421,18 @@
       window.addEventListener("pointermove", mv);
       window.addEventListener("pointerup", up);
     });
+    cv.addEventListener("wheel", e => {   // 滚轮微调
+      e.preventDefault(); e.stopPropagation();
+      const dir = e.deltaY < 0 ? 1 : -1;
+      let v = node.p[spec.k] + dir * spec.step * 2;
+      v = +clamp(v, spec.min, spec.max).toFixed(4);
+      if (v !== node.p[spec.k]) {
+        node.p[spec.k] = v;
+        draw();
+        if (node._refreshAdv) node._refreshAdv();
+        G.paramChanged(node, spec.k);
+      }
+    }, { passive: false });
     cv.addEventListener("dblclick", e => {
       e.stopPropagation();
       node.p[spec.k] = spec.def;
