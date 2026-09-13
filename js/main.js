@@ -34,6 +34,41 @@ Aether.promptText = function (title, def, cb) {
   document.getElementById("modalOk").onclick = ok;
 };
 
+/* ---- 数值编辑弹窗(与组件风格统一) ---- */
+Aether.promptNumber = function (title, value, min, max, fmtText, cb) {
+  const back = document.getElementById("modalBack");
+  const body = document.getElementById("modalBody");
+  document.getElementById("modalTitle").textContent = title;
+  body.innerHTML = `
+    <div style="display:flex;align-items:center;gap:12px;">
+      <input id="promptNum" type="text" inputmode="decimal" autocomplete="off"
+        style="flex:1;background:#141b26;border:1px solid #35507a;color:#eaf3ff;border-radius:var(--ctl-r);
+               padding:9px 12px;font-size:18px;font-family:Consolas,monospace;outline:none;
+               box-shadow:0 0 12px rgba(57,217,138,.12) inset;text-align:right;">
+      <span style="font-size:var(--fs-xs);color:var(--ink-4);white-space:nowrap;">${min} ~ ${max}</span>
+    </div>`;
+  const input = body.querySelector("#promptNum");
+  input.value = fmtText;
+  back.classList.remove("hidden");
+  input.focus(); input.select();
+  const okBtn = document.getElementById("modalOk");
+  okBtn.textContent = "确定";
+  const commit = () => {
+    let v = parseFloat(input.value.replace(",", "."));
+    back.classList.add("hidden");
+    okBtn.textContent = "知道了";
+    if (isNaN(v)) return;
+    v = Math.min(max, Math.max(min, v));
+    cb(v);
+  };
+  input.addEventListener("keydown", e => {
+    e.stopPropagation();
+    if (e.key === "Enter") commit();
+    if (e.key === "Escape") { back.classList.add("hidden"); okBtn.textContent = "知道了"; }
+  });
+  okBtn.onclick = commit;
+};
+
 /* ---- 确认框 ---- */
 Aether.confirmBox = function (title, cb) {
   const back = document.getElementById("modalBack");

@@ -180,8 +180,19 @@
     const track = el("div", "pt", row);
     const dot = el("i", "pd", track);
     const val = el("span", "pv", row);
+    val.title = "双击编辑数值";
+    val.style.cursor = "text";
     const f = fmtOf(spec.fmt);
     const p = node.p;
+    val.addEventListener("dblclick", e => {
+      e.stopPropagation();
+      if (Aether.promptNumber)
+        Aether.promptNumber(`${node.title} · ${spec.label}`, p[spec.k], spec.min, spec.max, f(p[spec.k]), v => {
+          p[spec.k] = v;
+          render();
+          G.paramChanged(node, spec.k);
+        });
+    });
 
     const isLog = !!spec.log && spec.min > 0;
     const toFrac = v => isLog
@@ -382,7 +393,7 @@
   function makeKnob(node, spec) {
     const S = 34, DPR = Math.min(2, devicePixelRatio || 1);
     const wrap = el("div", "knob");
-    wrap.title = spec.label;
+    wrap.title = spec.label + " · 双击编辑数值";
     const cv = document.createElement("canvas");
     cv.width = S * DPR; cv.height = S * DPR;
     cv.style.width = S + "px"; cv.style.height = S + "px";
@@ -452,10 +463,13 @@
     }, { passive: false });
     cv.addEventListener("dblclick", e => {
       e.stopPropagation();
-      node.p[spec.k] = spec.def;
-      draw();
-      if (node._refreshAdv) node._refreshAdv();
-      G.paramChanged(node, spec.k);
+      if (Aether.promptNumber)
+        Aether.promptNumber(`${node.title} · ${spec.label}`, node.p[spec.k], spec.min, spec.max, fmtOf(spec.fmt)(node.p[spec.k]), v => {
+          node.p[spec.k] = v;
+          draw();
+          if (node._refreshAdv) node._refreshAdv();
+          G.paramChanged(node, spec.k);
+        });
     });
 
     draw();
