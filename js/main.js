@@ -118,7 +118,7 @@ function showHelp() {
   Aether.Graph.init();
   // 默认音色: 电钢琴
   Aether.presets.init();
-  Aether.Graph.applyPatch(JSON.parse(JSON.stringify(Aether.presets.factory["电钢琴 DX"])));
+  Aether.Graph.applyPatch(JSON.parse(JSON.stringify(Aether.presets.factory["电钢琴"])));
 
   // 键盘 & 音序器
   Aether.kb.init();
@@ -242,7 +242,7 @@ function showHelp() {
     songSel.value = "";
   });
 
-  // 连接方式下拉(DX7 式算法, 附小图)
+  // 连接方式下拉(经典算法, 附小图)
   const algoDd = document.getElementById("algoDd");
   const algoMenu = document.getElementById("algoMenu");
   function drawAlgoCv(cv, alg) {

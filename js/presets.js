@@ -45,7 +45,7 @@
 
   /* ================= 出厂音色 ================= */
   PR.factory = {
-    "电钢琴 DX": build("电钢琴 DX", [
+    "电钢琴": build("电钢琴", [
       { wave: 0, ratio: 1,    detune: 0,  level: 85, fb: 0,  a: 0,  d: 900,  s: 25, r: 650 },
       { wave: 0, ratio: 14,   detune: 0,  level: 58, fb: 0,  a: 0,  d: 260,  s: 0,  r: 220 },
       { wave: 0, ratio: 1,    detune: 7,  level: 62, fb: 0,  a: 0,  d: 1300, s: 28, r: 850 },
@@ -148,8 +148,8 @@
       ["delay", { time: 230, fb: 35, mix: 20 }],
     ]),
 
-    /* ---- DX7 经典复刻系列 (参考 Dexed / DX7 ROM 音色) ---- */
-    "DX · 电钢琴2": build("DX · 电钢琴2", [
+    /* ---- 经典复刻系列 ---- */
+    "电钢琴2": build("电钢琴2", [
       { wave: 0, ratio: 1,  detune: 0,  level: 85, fb: 0, a: 0, d: 900,  s: 22, r: 550 },
       { wave: 0, ratio: 14, detune: 0,  level: 58, fb: 0, a: 0, d: 220,  s: 0,  r: 180 },
       { wave: 0, ratio: 1,  detune: 7,  level: 62, fb: 0, a: 0, d: 1100, s: 26, r: 750 },
@@ -164,7 +164,7 @@
       ["tremolo", { rate: 4.2, depth: 30, mix: 60 }],
     ]),
 
-    "DX · 合成贝斯2": build("DX · 合成贝斯2", [
+    "合成贝斯2": build("合成贝斯2", [
       { wave: 3, ratio: 1,   detune: 0,  level: 88, fb: 18, a: 0, d: 420, s: 52, r: 200 },
       { wave: 3, ratio: 1,   detune: -8, level: 66, fb: 0,  a: 0, d: 420, s: 50, r: 190 },
       { wave: 0, ratio: 2,   detune: 0,  level: 48, fb: 0,  a: 0, d: 220, s: 30, r: 110 },
@@ -179,7 +179,7 @@
       ["eq", { low: 5, mid: 0, high: 2, midF: 1000 }],
     ], { vol: 0.8 }),
 
-    "DX · 长笛": build("DX · 长笛", [
+    "长笛": build("长笛", [
       { wave: 0, ratio: 1, detune: 0,  level: 88, fb: 0, a: 110, d: 280, s: 86, r: 260,
         lfoOn: true, lwave: 0, lrate: 5.2, ldepth: 14 },
       { wave: 0, ratio: 1, detune: 3,  level: 16, fb: 0, a: 80,  d: 220, s: 72, r: 200 },
@@ -195,7 +195,7 @@
       ["reverb", { size: 2.2, mix: 28 }],
     ]),
 
-    "DX · 电颤琴": build("DX · 电颤琴", [
+    "电颤琴": build("电颤琴", [
       { wave: 0, ratio: 2,    detune: 0,  level: 80, fb: 0, a: 2, d: 1300, s: 0, r: 900,
         lfoOn: true, lwave: 0, lrate: 5, ldepth: 10 },
       { wave: 0, ratio: 2,    detune: 11, level: 66, fb: 0, a: 2, d: 1200, s: 0, r: 850,
@@ -212,7 +212,7 @@
       ["reverb", { size: 2.6, mix: 25 }],
     ]),
 
-    "DX · 马林巴": build("DX · 马林巴", [
+    "马林巴": build("马林巴", [
       { wave: 0, ratio: 4,    detune: 0, level: 82, fb: 0, a: 0, d: 320, s: 0, r: 260 },
       { wave: 0, ratio: 12.5, detune: 0, level: 44, fb: 0, a: 0, d: 90,  s: 0, r: 80 },
       { wave: 0, ratio: 1,    detune: 0, level: 55, fb: 0, a: 0, d: 230, s: 0, r: 190 },
@@ -226,7 +226,7 @@
       ["reverb", { size: 1.8, mix: 30 }],
     ]),
 
-    "DX · 弦乐": build("DX · 弦乐", [
+    "弦乐": build("弦乐", [
       { wave: 3, ratio: 1, detune: -6,  level: 56, fb: 6,  a: 900,  d: 600, s: 86, r: 1500 },
       { wave: 3, ratio: 1, detune: 8,   level: 52, fb: 0,  a: 1050, d: 600, s: 86, r: 1600 },
       { wave: 3, ratio: 1, detune: -13, level: 50, fb: 0,  a: 1200, d: 600, s: 86, r: 1700 },
@@ -241,7 +241,7 @@
       ["reverb", { size: 4.5, mix: 55 }],
     ], { vol: 0.8 }),
 
-    "DX · 羽管键琴": build("DX · 羽管键琴", [
+    "羽管键琴": build("羽管键琴", [
       { wave: 3, ratio: 2,  detune: 0, level: 78, fb: 0, a: 0, d: 700, s: 0,  r: 420 },
       { wave: 2, ratio: 2,  detune: 0, level: 28, fb: 0, a: 0, d: 160, s: 0,  r: 130 },
       { wave: 0, ratio: 1,  detune: 0, level: 48, fb: 0, a: 0, d: 560, s: 0,  r: 380 },
@@ -256,7 +256,7 @@
       ["eq", { low: 0, mid: 0, high: 4, midF: 3000 }],
     ]),
 
-    "DX · 流行风琴": build("DX · 流行风琴", [
+    "流行风琴": build("流行风琴", [
       { wave: 0, ratio: 1, detune: 0, level: 72, fb: 0, a: 5,  d: 120, s: 99, r: 130 },
       { wave: 0, ratio: 4, detune: 0, level: 16, fb: 0, a: 5,  d: 120, s: 99, r: 130 },
       { wave: 0, ratio: 2, detune: 0, level: 52, fb: 0, a: 5,  d: 120, s: 99, r: 130 },
@@ -271,7 +271,7 @@
       ["tremolo", { rate: 6.8, depth: 38, mix: 70 }],
     ]),
 
-    "DX · 克拉维琴": build("DX · 克拉维琴", [
+    "克拉维琴": build("克拉维琴", [
       { wave: 2, ratio: 1,    detune: 0, level: 82, fb: 12, a: 0, d: 280, s: 32, r: 130 },
       { wave: 3, ratio: 1.02, detune: 0, level: 52, fb: 0,  a: 0, d: 240, s: 30, r: 120 },
       { wave: 0, ratio: 3,    detune: 0, level: 24, fb: 0,  a: 0, d: 130, s: 0,  r: 90 },
@@ -286,7 +286,7 @@
       ["phaser", { rate: 1.1, depth: 55, mix: 45 }],
     ]),
 
-    "DX · 西塔琴": build("DX · 西塔琴", [
+    "西塔琴": build("西塔琴", [
       { wave: 3, ratio: 1,    detune: 0, level: 80, fb: 38, a: 0, d: 500, s: 55, r: 300 },
       { wave: 3, ratio: 1.99, detune: 0,  level: 46, fb: 0,  a: 0, d: 420, s: 50, r: 280 },
       { wave: 0, ratio: 1,    detune: 0,  level: 45, fb: 0,  a: 0, d: 400, s: 50, r: 260 },
@@ -301,6 +301,9 @@
       ["overdrive", { drive: 8, tone: 4500, mix: 55 }],
     ], { vol: 0.8 }),
   };
+
+  /* 经典复刻系列音色名(下拉列表单独分组) */
+  const CLASSIC_NAMES = new Set(["电钢琴2", "合成贝斯2", "长笛", "电颤琴", "马林巴", "弦乐", "羽管键琴", "流行风琴", "克拉维琴", "西塔琴"]);
 
   /* ================= 随机音色 (开盲盒) ================= */
   const RATIOS = [0.5, 1, 1.414, 1.5, 2, 2.5, 3, 3.99, 5.04, 7, 9.19];
@@ -387,12 +390,12 @@
     const sel = document.getElementById("presetSel");
     sel.innerHTML = "";
     const g1 = document.createElement("optgroup"); g1.label = "出厂音色";
-    const g2 = document.createElement("optgroup"); g2.label = "DX7 复刻";
+    const g2 = document.createElement("optgroup"); g2.label = "经典复刻";
     for (const name of Object.keys(PR.factory)) {
-      const dx = name.startsWith("DX · ");
+      const isClassic = CLASSIC_NAMES.has(name);
       const o = document.createElement("option");
       o.value = "f:" + name; o.textContent = name;
-      (dx ? g2 : g1).appendChild(o);
+      (isClassic ? g2 : g1).appendChild(o);
     }
     sel.appendChild(g1); sel.appendChild(g2);
     const names = Object.keys(PR.saves);
