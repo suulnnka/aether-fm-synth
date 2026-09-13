@@ -268,7 +268,7 @@
     return p;
   }
 
-  /* ---- ADSR 可视化图形(经典 DAW 拖拽手柄) ---- */
+  /* ---- ADSR 可视化图形(经典 DAW 式: 分段宽度按时间占比, 手柄可拖) ---- */
   function makeAdsrPanel(node) {
     const wrap = el("div", "adsr-wrap", null);
     const cv = document.createElement("canvas");
@@ -279,32 +279,42 @@
     wrap.appendChild(cv);
     const g = cv.getContext("2d");
     const PAD = 5, TOP = 9, BOT = 50;
-    const aW = 52, dW = 52, sW = 38, rW = W - PAD * 2 - aW - dW - sW;
-    const x0 = PAD, xA = x0 + aW, xD = xA + dW, xS = xD + sW, xR = W - PAD;
-    const specOf = k => OP_PARAMS.find(s => s.k === k);
+    const S_US = 46;                    // sustain 平台的固定显示宽度(px)
     const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
     const sYv = () => BOT - (node.p.s / 99) * (BOT - TOP);
 
+    // 各段几何: A/D/R 按时间占比分配除 sustain 平台外的宽度
+    function geom() {
+      const { a, d, r } = node.p;
+      const T = Math.max(1, a + d + r);
+      const f = W - PAD * 2 - S_US;
+      const x0 = PAD, xA = PAD + f * (a / T), xD = xA + f * (d / T);
+      const xS = xD + S_US, xR = W - PAD;
+      return { x0, xA, xD, xS, xR };
+    }
+
     function draw() {
+      const gm = geom();
       g.setTransform(DPR, 0, 0, DPR, 0, 0);
       g.clearRect(0, 0, W, H);
-      // 分段底色/分隔线/标签
-      g.fillStyle = "#3d4c62";
       g.font = "8px Consolas";
-      const segs = [["A", x0, xA], ["D", xA, xD], ["S", xD, xS], ["R", xS, xR]];
+      const segs = [["A", gm.x0, gm.xA], ["D", gm.xA, gm.xD], ["S", gm.xD, gm.xS], ["R", gm.xS, gm.xR]];
       for (const [nm, b1, b2] of segs) {
+        g.fillStyle = "#3d4c62";
         g.fillText(nm, (b1 + b2) / 2 - 3, H - 1);
         g.fillStyle = "rgba(140,170,220,0.10)";
         g.fillRect(b2, 4, 1, H - 14);
-        g.fillStyle = "#3d4c62";
       }
+      g.fillStyle = "rgba(140,170,220,0.10)";
       g.fillRect(PAD, BOT, W - PAD * 2, 1);
 
       const sy = sYv();
-      const pts = [[x0, BOT], [xA, TOP], [xD, sy], [xS, sy], [xR, BOT]];
       g.beginPath();
-      g.moveTo(pts[0][0], pts[0][1]);
-      for (let i = 1; i < pts.length; i++) g.lineTo(pts[i][0], pts[i][1]);
+      g.moveTo(gm.x0, BOT);
+      g.lineTo(gm.xA, TOP);
+      g.lineTo(gm.xD, sy);
+      g.lineTo(gm.xS, sy);
+      g.lineTo(gm.xR, BOT);
       g.closePath();
       g.fillStyle = node.color + "2e";
       g.fill();
@@ -312,8 +322,7 @@
       g.lineWidth = 1.6;
       g.stroke();
 
-      // 手柄(颜色跟随节点)
-      for (const [hx, hy] of [[xA, TOP], [xD, sy], [xS, sy]]) {
+      for (const [hx, hy] of [[gm.xA, TOP], [gm.xD, sy], [gm.xS, sy]]) {
         g.beginPath();
         g.arc(hx, hy, 5, 0, Math.PI * 2);
         g.fillStyle = "#0c1119"; g.fill();
@@ -324,34 +333,43 @@
       }
     }
 
-    // 手柄拖拽
+    /* 拖拽: 按按下位置所处的时间段拾取手柄, 手柄跟随光标 */
     cv.addEventListener("pointerdown", e => {
       e.stopPropagation(); e.preventDefault();
       const rect = cv.getBoundingClientRect();
+      const gm0 = geom();
       const mx = e.clientX - rect.left, my = e.clientY - rect.top;
-      const sy = sYv();
-      // 按横向区域拾取: A 段抓攻击手柄, D/S 段抓衰减手柄, R 段抓释放手柄
       let pick;
-      if (mx < xA) pick = { k: "a", x: xA, y: TOP };
-      else if (mx < xD + (xS - xD) * 0.5) pick = { k: "d", x: xD, y: sy, also: "s" };
-      else pick = { k: "r", x: xS, y: sy };
-      const apply = (cx, cy) => {
-        if (pick.k === "a") {
-          node.p.a = clamp(Math.round(((cx - x0) / aW) * 4000 / 5) * 5, 0, 4000);
+      if (mx < gm0.xA) pick = "a";
+      else if (mx < gm0.xD) pick = "d";
+      else pick = "r";
+      const T0 = Math.max(1, node.p.a + node.p.d + node.p.r);   // 拖拽开始时的总时长
+      const free = W - PAD * 2 - S_US;
+      const frac0 = clamp((mx - PAD) / free, 0, 1);
+      // 抓取偏移: 保持按下点与手柄的相对关系, 拖动时不跳变
+      let off = 0;
+      if (pick === "a") off = node.p.a - frac0 * T0;
+      else if (pick === "d") off = node.p.d - frac0 * T0;
+      else off = node.p.r - ((gm0.xR - mx) / free) * T0;
+      const sOff = node.p.s - ((BOT - my) / (BOT - TOP)) * 99;
+      const setFrom = (cx, cy) => {
+        const frac = clamp((cx - PAD) / free, 0, 1);
+        if (pick === "a") {
+          node.p.a = clamp(Math.round(clamp(frac * T0 + off, 0, 4000) / 5) * 5, 0, 4000);
           G.paramChanged(node, "a");
-        } else if (pick.k === "d") {
-          node.p.d = clamp(Math.round(((cx - xA) / dW) * 4000 / 5) * 5, 5, 4000);
-          node.p.s = clamp(Math.round(((BOT - cy) / (BOT - TOP)) * 99), 0, 99);
+        } else if (pick === "d") {
+          node.p.d = clamp(Math.round(clamp(frac * T0 + off, 5, 4000) / 5) * 5, 5, 4000);
+          node.p.s = clamp(Math.round(clamp(((BOT - cy) / (BOT - TOP)) * 99 + sOff, 0, 99)), 0, 99);
           G.paramChanged(node, "d"); G.paramChanged(node, "s");
         } else {
-          node.p.r = clamp(Math.round((10 + ((xR - cx) / rW) * 7990) / 10) * 10, 10, 8000);
+          node.p.r = clamp(Math.round(clamp(((gm0.xR - cx) / free) * T0 + off, 10, 8000) / 10) * 10, 10, 8000);
           G.paramChanged(node, "r");
         }
         draw();
         if (node._refreshAdv) node._refreshAdv();
       };
-      apply(e.clientX - rect.left, e.clientY - rect.top);
-      const mv = ev => apply(ev.clientX - rect.left, ev.clientY - rect.top);
+      setFrom(e.clientX - rect.left, e.clientY - rect.top);
+      const mv = ev => setFrom(ev.clientX - rect.left, ev.clientY - rect.top);
       const up = () => { window.removeEventListener("pointermove", mv); window.removeEventListener("pointerup", up); };
       window.addEventListener("pointermove", mv);
       window.addEventListener("pointerup", up);
