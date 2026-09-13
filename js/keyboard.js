@@ -53,7 +53,9 @@
     const el = document.getElementById("heldInfo");
     if (!el) return;
     const names = [...KB.held.keys()].sort((a, b) => a - b).map(noteName);
-    el.textContent = names.length ? "● " + names.join(" ") : "";
+    let txt = names.length ? "● " + names.join(" ") : "";
+    if (KB.sustain) txt += (txt ? " · " : "") + "延音中";
+    el.textContent = txt;
   }
 
   /* ---------------- 虚拟琴键 ---------------- */
@@ -149,11 +151,16 @@
     if (isTyping(e)) return;
     if (e.code === "Space") {
       e.preventDefault();
-      if (!e.repeat) { KB.sustain = true; }
+      if (!e.repeat) { KB.sustain = true; updateHeldInfo(); }
       return;
     }
-    if (e.code === "KeyZ" && !e.repeat) { shiftOctave(-1); return; }
-    if (e.code === "KeyX" && !e.repeat) { shiftOctave(1); return; }
+    if (e.code === "Enter" && !isTyping(e)) {
+      e.preventDefault();
+      if (!e.repeat) Aether.seq.toggle();
+      return;
+    }
+    if (e.code === "KeyZ" && !e.repeat && !e.ctrlKey && !e.metaKey && !e.altKey) { shiftOctave(-1); return; }
+    if (e.code === "KeyX" && !e.repeat && !e.ctrlKey && !e.metaKey && !e.altKey) { shiftOctave(1); return; }
     const off = KEYMAP[e.code];
     if (off == null) return;
     e.preventDefault();
@@ -162,7 +169,7 @@
   });
 
   window.addEventListener("keyup", e => {
-    if (e.code === "Space") { KB.sustain = false; releaseSustained(); return; }
+    if (e.code === "Space") { KB.sustain = false; releaseSustained(); updateHeldInfo(); return; }
     const off = KEYMAP[e.code];
     if (off == null) return;
     release(KB.base + off);

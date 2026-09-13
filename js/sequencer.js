@@ -264,9 +264,30 @@
 
   SC.toggle = () => SC.playing ? SC.stop() : SC.play();
 
+  /* ---- 撤销: 音符状态快照栈 ---- */
+  const undoStack = [];
+  function pushUndo() {
+    undoStack.push(JSON.stringify(SC.notes));
+    if (undoStack.length > 80) undoStack.shift();
+  }
+  SC.undo = function () {
+    if (!undoStack.length) { Aether.toast("没有可撤销的操作"); return; }
+    SC.notes = JSON.parse(undoStack.pop());
+    SC.dirty = true;
+    updateSpacer();
+  };
+  window.addEventListener("keydown", e => {
+    if ((e.ctrlKey || e.metaKey) && e.code === "KeyZ" && !e.shiftKey &&
+        !(e.target && (e.target.tagName === "INPUT" || e.target.tagName === "SELECT" || e.target.tagName === "TEXTAREA" || e.target.isContentEditable))) {
+      e.preventDefault();
+      SC.undo();
+    }
+  });
+
   /* 加载曲目: 替换全部音符并应用曲速 */
   SC.loadSong = function (song) {
     SC.stop();
+    pushUndo();
     SC.notes = song.notes().map(n => ({ id: SC.nid++, start: n[0], dur: n[1], midi: n[2], vel: n[3] != null ? n[3] : .9 }));
     SC.bpm = song.bpm;
     const bpm = document.getElementById("bpmInput");
@@ -302,7 +323,7 @@
 
     if (e.button === 2) {
       const n = noteAt(x, y);
-      if (n) { SC.notes = SC.notes.filter(q => q !== n); SC.dirty = true; }
+      if (n) { pushUndo(); SC.notes = SC.notes.filter(q => q !== n); SC.dirty = true; }
       return;
     }
     if (e.button === 1) return;
@@ -312,6 +333,7 @@
     const now = performance.now();
     const dbl = !!(n && SC._lastTap && SC._lastTap.note === n && now - SC._lastTap.t < 350);
     SC._lastTap = n ? { note: n, t: now } : null;
+    if (n) pushUndo();   // 对已有音符的任何操作(移动/缩放/删除)前先存快照
     if (n) {
       const nx = beatToX(n.start), nw = n.dur * SC.ppb;
       if (x > nx + nw - 8) {
@@ -325,6 +347,7 @@
     } else {
       // 新建音符
       const m = SC.snapPitch(Math.min(SC.PITCH_MAX, Math.max(SC.PITCH_MIN, midi)));
+      pushUndo();
       const note = { id: SC.nid++, start: Math.max(0, snapFloor(beat)), dur: Math.max(SC.snap, SC.lastDur), midi: m, vel: 0.9 };
       SC.notes.push(note);
       dragN = { note, mode: "new" };   // "new": 若随即转为双指平移, 此音符会被撤销
@@ -406,7 +429,7 @@
       SC.ppb = +e.target.value; SC.dirty = true; updateSpacer();
     });
     document.getElementById("clearNotes").addEventListener("click", () => {
-      SC.notes = []; SC.dirty = true;
+      pushUndo(); SC.notes = []; SC.dirty = true;
     });
 
     const bpm = document.getElementById("bpmInput");

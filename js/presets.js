@@ -424,10 +424,12 @@
         Aether.Graph.applyPatch(JSON.parse(JSON.stringify(patch)));
         Aether.toast("已载入「" + name + "」");
       }
+      PR.lastSelectedSave = kind === "s" ? name : null;
       e.target.value = "";
     });
 
     document.getElementById("randBtn").addEventListener("click", async () => {
+      Aether.presets.lastSelectedSave = null;
       if (!(await Aether.audio.ensure())) return;
       Aether.Graph.applyPatch(PR.random());
       Aether.toast("🎲 盲盒开启! 不满意就再抽一次");

@@ -34,6 +34,17 @@ Aether.promptText = function (title, def, cb) {
   document.getElementById("modalOk").onclick = ok;
 };
 
+/* ---- 确认框 ---- */
+Aether.confirmBox = function (title, cb) {
+  const back = document.getElementById("modalBack");
+  document.getElementById("modalTitle").textContent = title;
+  document.getElementById("modalBody").innerHTML = "";
+  back.classList.remove("hidden");
+  const okBtn = document.getElementById("modalOk");
+  okBtn.textContent = "确定";
+  okBtn.onclick = () => { back.classList.add("hidden"); cb(); okBtn.textContent = "知道了"; };
+};
+
 /* ---- 帮助 ---- */
 function showHelp() {
   const back = document.getElementById("modalBack");
@@ -58,7 +69,7 @@ function showHelp() {
   <br>触摸屏: 双指平移卷帘, 双指捏合调整时间缩放, <b>双击音符</b>删除。
   <br>· <b>音阶吸附</b>: 选择音阶与根音后, 音符自动吸附到调内音级 (选"半音阶"则自由)
   <br>· <b>吸附</b>: 时间网格 1/16 ~ 小节; <b>小节</b>: 循环长度, 开"自动长度"则跟随最后音符, 可无限长
-  <br>· 顶栏 <kbd>▶</kbd> 播放 / <kbd>■</kbd> 停止; BPM 顶栏调整; <b>节拍器</b> 可开关; 顶栏 <b>曲目</b> 下拉可加载内置经典曲目
+  <br>· 顶栏 <kbd>▶</kbd> 播放 / <kbd>■</kbd> 停止, <kbd>回车</kbd> 切换播放; BPM 顶栏调整; <b>节拍器</b> 可开关; 顶栏 <b>曲目</b> 下拉可加载内置经典曲目
   <h4>◈ 音色</h4>
   顶栏预设下拉载入出厂音色; <kbd>💾保存</kbd> 存入浏览器; <kbd>🎲随机</kbd> 开盲盒随机生成音色。
   `;
@@ -165,6 +176,26 @@ function showHelp() {
     o.value = s.id; o.textContent = s.name;
     songSel.appendChild(o);
   }
+  // 删除已保存音色
+  const delBtn = document.getElementById("delPresetBtn");
+  const presetSel = document.getElementById("presetSel");
+  presetSel.addEventListener("change", () => {
+    delBtn.classList.toggle("hidden", !Aether.presets.lastSelectedSave);
+  });
+  delBtn.addEventListener("click", () => {
+    const name = Aether.presets.lastSelectedSave;
+    if (!name) return;
+    Aether.confirmBox("删除音色「" + name + "」?", () => {
+      delete Aether.presets.saves[name];
+      localStorage.setItem("aetherfm.saves", JSON.stringify(Aether.presets.saves));
+      Aether.presets.refreshList();
+      Aether.presets.lastSelectedSave = null;
+      delBtn.classList.add("hidden");
+      Aether.toast("已删除「" + name + "」");
+    });
+    document.getElementById("modalOk").textContent = "删除";
+  });
+
   songSel.addEventListener("change", () => {
     const s = Aether.songs.list.find(x => x.id === songSel.value);
     if (!s) return;
