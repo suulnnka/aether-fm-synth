@@ -225,20 +225,21 @@ input[type=checkbox]:checked::after{
 
 /* 算子展开高级面板 */
 .exp-bar{
-  display:block;width:auto;height:11px;margin:6px -10px -10px;
-  background:#1a2334;border:0;border-top:1px solid #222d40;
-  border-radius:0 0 9px 9px;cursor:pointer;position:relative;
-  transition:background .12s;
+  display:block;width:72%;height:16px;margin:6px auto 0;
+  background:#161e2c;border:1px solid #26334c;border-radius:8px;
+  cursor:pointer;position:relative;
+  transition:background .12s,border-color .12s;
 }
-.exp-bar:hover{background:#212c42;}
+.exp-bar:hover{background:#222b3d;border-color:#3b5079;}
 .exp-bar::after{
   content:"";position:absolute;left:50%;top:50%;
-  transform:translate(-50%,-30%);
+  transform:translate(-50%,-50%);
   border-left:5px solid transparent;border-right:5px solid transparent;
   border-top:5px solid #5c6b80;
 }
+.exp-bar:hover::after{border-top-color:#8fa2bd;}
 .exp-bar.open::after{
-  transform:translate(-50%,-70%);
+  transform:translate(-50%,-50%);
   border-top:0;
   border-bottom:5px solid #8ff5c8;
 }
