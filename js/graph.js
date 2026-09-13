@@ -148,7 +148,6 @@
       glow.setAttribute("opacity", "0.16");
       const core = mk("cable");
       core.setAttribute("stroke", fn.color); core.setAttribute("stroke-width", "2.2");
-      if (c.sel) { core.setAttribute("stroke", "#eaf6ff"); core.setAttribute("stroke-width", "3"); }
       const hit = mk("cable-hit");
       hit.__cable = c;
       c.el = { glow, core, hit };
@@ -957,11 +956,6 @@
     if (hit && hit.__cable) {
       const c = hit.__cable;
       if (e.detail >= 2 || e.button === 2) { G.removeCable(c); }
-      else {
-        G.cables.forEach(x => x.sel = false);
-        c.sel = !c.sel;
-        G.requestWires();
-      }
       e.stopPropagation();
       return;
     }
