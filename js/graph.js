@@ -594,10 +594,14 @@
     chFlt.addEventListener("click", () => {
       node.p.filter = ((node.p.filter | 0) + 1) % 3;
       refreshRows(); G.paramChanged(node, "filter");
+      G.resolveOverlaps(node.id);   // Cutoff 行显隐会改变节点高度
+      G.requestWires();
     });
     chLfo.addEventListener("click", () => {
       node.p.lfoOn = !node.p.lfoOn;
       refreshRows(); G.paramChanged(node, "lfoOn");
+      G.resolveOverlaps(node.id);   // LFO 配置显隐会改变节点高度
+      G.requestWires();
     });
 
     node._refreshAdv = () => { adsr.draw(); knobs.forEach(k => k.draw()); };
