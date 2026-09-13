@@ -225,24 +225,28 @@ input[type=checkbox]:checked::after{
 
 /* 算子展开高级面板 */
 .exp-bar{
-  display:block;width:72%;height:16px;margin:6px auto 0;
-  background:#161e2c;border:1px solid #26334c;border-radius:8px;
-  cursor:pointer;position:relative;
-  transition:background .12s,border-color .12s;
+  display:block;width:calc(100% + 20px);height:14px;margin:6px -10px -10px;
+  background:linear-gradient(180deg,#1a2334,#151c29);
+  border:0;border-top:1px solid #222d40;
+  border-radius:0 0 9px 9px;cursor:pointer;position:relative;
+  transition:background .12s;
 }
-.exp-bar:hover{background:#222b3d;border-color:#3b5079;}
+.exp-bar:hover{background:#232e44;}
 .exp-bar::after{
   content:"";position:absolute;left:50%;top:50%;
-  transform:translate(-50%,-50%);
+  transform:translate(-50%,-30%);
   border-left:5px solid transparent;border-right:5px solid transparent;
-  border-top:5px solid #5c6b80;
+  border-top:5px solid var(--ac);
+  filter:drop-shadow(0 0 3px var(--ac));
 }
-.exp-bar:hover::after{border-top-color:#8fa2bd;}
+.exp-bar:hover::after{border-top-color:var(--ink-1);filter:drop-shadow(0 0 4px var(--ink-1));}
 .exp-bar.open::after{
-  transform:translate(-50%,-50%);
+  transform:translate(-50%,-70%);
   border-top:0;
-  border-bottom:5px solid #8ff5c8;
+  border-bottom:5px solid var(--ac);
+  filter:drop-shadow(0 0 3px var(--ac));
 }
+.exp-bar.open:hover::after{border-bottom-color:var(--ink-1);filter:drop-shadow(0 0 4px var(--ink-1));}
 .adv-panel{margin-top:8px;padding-top:6px;border-top:1px dashed #26334c;}
 .adsr-wrap{margin-bottom:2px;}
 .adsr-cv{display:block;width:100%;height:66px;cursor:crosshair;touch-action:none;}

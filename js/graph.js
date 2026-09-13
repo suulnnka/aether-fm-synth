@@ -577,7 +577,7 @@
     makeSliderRow(node, { k: "ldepth", label: "Depth", min: 0, max: 100, step: 1, def: 25, fmt: "int" }, lfoCfg);
 
     // 收起条: 紧贴卡片底边, 中间三角指示方向(展开态朝上)
-    const expBar = el("button", "exp-bar open", node.bodyEl);
+    const expBar = el("button", "exp-bar", node.bodyEl);
     expBar.title = "展开 / 收起高级面板";
     expBar.addEventListener("pointerdown", e => e.stopPropagation());
     expBar.addEventListener("click", e => {
