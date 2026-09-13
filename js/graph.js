@@ -406,7 +406,8 @@
       const cx = S / 2, cy = S / 2, r = 11.5;
       g.strokeStyle = "#233046"; g.lineWidth = 3.5;
       g.beginPath(); g.arc(cx, cy, r, A0, A1); g.stroke();
-      g.strokeStyle = "#7df0c4"; g.shadowColor = "#7df0c4"; g.shadowBlur = 4;
+      const col = node.color || "#7df0c4";
+      g.strokeStyle = col; g.shadowColor = col; g.shadowBlur = 4;
       g.beginPath(); g.arc(cx, cy, r, A0, A0 + (A1 - A0) * fr); g.stroke();
       g.shadowBlur = 0;
       const ang = A0 + (A1 - A0) * fr;
