@@ -382,7 +382,6 @@
       : spec.min + fr * (spec.max - spec.min);
     const A0 = Math.PI * 0.75, A1 = Math.PI * 2.25;
 
-    const col = node.color || "#7df0c4";
     function draw() {
       const fr = clamp(toFrac(node.p[spec.k]), 0, 1);
       g.setTransform(DPR, 0, 0, DPR, 0, 0);
@@ -390,7 +389,7 @@
       const cx = S / 2, cy = S / 2, r = 11.5;
       g.strokeStyle = "#233046"; g.lineWidth = 3.5;
       g.beginPath(); g.arc(cx, cy, r, A0, A1); g.stroke();
-      g.strokeStyle = col; g.shadowColor = col; g.shadowBlur = 4;
+      g.strokeStyle = "#7df0c4"; g.shadowColor = "#7df0c4"; g.shadowBlur = 4;
       g.beginPath(); g.arc(cx, cy, r, A0, A0 + (A1 - A0) * fr); g.stroke();
       g.shadowBlur = 0;
       const ang = A0 + (A1 - A0) * fr;
