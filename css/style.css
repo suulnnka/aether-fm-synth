@@ -226,12 +226,12 @@ input[type=checkbox]:checked::after{
 /* 算子展开高级面板 */
 .exp-bar{
   display:block;width:calc(100% + 20px);height:14px;margin:6px -10px -10px;
-  background:linear-gradient(180deg,#1a2334,#151c29);
-  border:0;border-top:1px solid #222d40;
+  background:linear-gradient(180deg,#161d2a,#121824);
+  border:0;border-top:1px solid #1f2938;
   border-radius:0 0 9px 9px;cursor:pointer;position:relative;
   transition:background .12s;
 }
-.exp-bar:hover{background:#232e44;}
+.exp-bar:hover{background:#1d2737;}
 .exp-bar::after{
   content:"";position:absolute;left:50%;top:50%;
   transform:translate(-50%,-30%);
